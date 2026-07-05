@@ -1,0 +1,99 @@
+[30-Jun-2026 01:30:52 Africa/Accra] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'name' in 'field list' in C:\xampp\htdocs\hostel\app\core\Database.php:37
+Stack trace:
+#0 C:\xampp\htdocs\hostel\app\core\Database.php(37): PDO->prepare('INSERT INTO use...')
+#1 C:\xampp\htdocs\hostel\app\core\Database.php(64): App\Core\Database::run('INSERT INTO use...', Array)
+#2 C:\xampp\htdocs\hostel\database\seed.php(19): App\Core\Database::insert('INSERT INTO use...', Array)
+#3 C:\xampp\htdocs\hostel\database\seed.php(28): seed_user('Hostel Administ...', 'hosteladmin', 'hosteladmin@chm...', 'hostel_admin')
+#4 {main}
+  thrown in C:\xampp\htdocs\hostel\app\core\Database.php on line 37
+[30-Jun-2026 02:01:06 Africa/Accra] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'condition, reorder_level, notes) VALUES (?, ?, ?, ?, ?, ?, ?)' at line 1 in C:\xampp\htdocs\hostel\app\core\Database.php:37
+Stack trace:
+#0 C:\xampp\htdocs\hostel\app\core\Database.php(37): PDO->prepare('INSERT INTO inv...')
+#1 C:\xampp\htdocs\hostel\app\core\Database.php(64): App\Core\Database::run('INSERT INTO inv...', Array)
+#2 C:\xampp\htdocs\hostel\app\core\Model.php(55): App\Core\Database::insert('INSERT INTO inv...', Array)
+#3 C:\xampp\htdocs\hostel\app\controllers\InventoryController.php(49): App\Core\Model->create(Array)
+#4 [internal function]: App\Controllers\InventoryController->store()
+#5 C:\xampp\htdocs\hostel\app\core\Router.php(44): call_user_func_array(Array, Array)
+#6 C:\xampp\htdocs\hostel\public\index.php(12): App\Core\Router->dispatch('POST', '/inventory')
+#7 {main}
+  thrown in C:\xampp\htdocs\hostel\app\core\Database.php on line 37
+[30-Jun-2026 02:02:09 Africa/Accra] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'condition, reorder_level, notes) VALUES (?, ?, ?, ?, ?, ?, ?)' at line 1 in C:\xampp\htdocs\hostel\app\core\Database.php:37
+Stack trace:
+#0 C:\xampp\htdocs\hostel\app\core\Database.php(37): PDO->prepare('INSERT INTO inv...')
+#1 C:\xampp\htdocs\hostel\app\core\Database.php(64): App\Core\Database::run('INSERT INTO inv...', Array)
+#2 C:\xampp\htdocs\hostel\app\core\Model.php(55): App\Core\Database::insert('INSERT INTO inv...', Array)
+#3 C:\xampp\htdocs\hostel\app\controllers\InventoryController.php(49): App\Core\Model->create(Array)
+#4 [internal function]: App\Controllers\InventoryController->store()
+#5 C:\xampp\htdocs\hostel\app\core\Router.php(44): call_user_func_array(Array, Array)
+#6 C:\xampp\htdocs\hostel\public\index.php(12): App\Core\Router->dispatch('POST', '/inventory')
+#7 {main}
+  thrown in C:\xampp\htdocs\hostel\app\core\Database.php on line 37
+[30-Jun-2026 10:10:09 Africa/Accra] PHP Warning:  file_get_contents(C:\xampp\htdocs\hostel\vendor\fpdf/font/helveticab.json): Failed to open stream: No such file or directory in C:\xampp\htdocs\hostel\vendor\fpdf\fpdf.php on line 1147
+[30-Jun-2026 10:10:09 Africa/Accra] PHP Fatal error:  Uncaught Exception: FPDF error: Could not load font definition file: C:\xampp\htdocs\hostel\vendor\fpdf/font/helveticab.json in C:\xampp\htdocs\hostel\vendor\fpdf\fpdf.php:267
+Stack trace:
+#0 C:\xampp\htdocs\hostel\vendor\fpdf\fpdf.php(1149): FPDF->Error('Could not load ...')
+#1 C:\xampp\htdocs\hostel\vendor\fpdf\fpdf.php(1138): FPDF->_loadjsonfont('C:\\xampp\\htdocs...')
+#2 C:\xampp\htdocs\hostel\vendor\fpdf\fpdf.php(461): FPDF->_loadfont('C:\\xampp\\htdocs...')
+#3 C:\xampp\htdocs\hostel\vendor\fpdf\fpdf.php(510): FPDF->AddFont('helvetica', 'B')
+#4 C:\xampp\htdocs\hostel\app\services\ReceiptPdf.php(30): FPDF->SetFont('helvetica', 'B', 16)
+#5 Command line code(5): App\Services\ReceiptPdf::render(Array, 'S')
+#6 {main}
+  thrown in C:\xampp\htdocs\hostel\vendor\fpdf\fpdf.php on line 267
+[30-Jun-2026 10:39:51 Africa/Accra] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in C:\xampp\htdocs\hostel\app\core\Database.php:38
+Stack trace:
+#0 C:\xampp\htdocs\hostel\app\core\Database.php(38): PDOStatement->execute(Array)
+#1 C:\xampp\htdocs\hostel\app\core\Database.php(64): App\Core\Database::run('INSERT INTO hos...', Array)
+#2 C:\xampp\htdocs\hostel\database\seed.php(105): App\Core\Database::insert('INSERT INTO hos...', Array)
+#3 C:\xampp\htdocs\hostel\database\seed.php(127): {closure}('Palm Grove Hall', 'PALM', 'female', 8, 4200.0)
+#4 {main}
+  thrown in C:\xampp\htdocs\hostel\app\core\Database.php on line 38
+[30-Jun-2026 17:22:44 Africa/Accra] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'u.hostel_id' in 'on clause' in C:\xampp\htdocs\hostel\app\core\Database.php:37
+Stack trace:
+#0 C:\xampp\htdocs\hostel\app\core\Database.php(37): PDO->prepare('SELECT u.*, h.n...')
+#1 C:\xampp\htdocs\hostel\app\core\Database.php(52): App\Core\Database::run('SELECT u.*, h.n...', Array)
+#2 C:\xampp\htdocs\hostel\app\models\User.php(28): App\Core\Database::all('SELECT u.*, h.n...', Array)
+#3 C:\xampp\htdocs\hostel\app\controllers\UserController.php(74): App\Models\User->scopedList()
+#4 [internal function]: App\Controllers\UserController->index()
+#5 C:\xampp\htdocs\hostel\app\core\Router.php(44): call_user_func_array(Array, Array)
+#6 C:\xampp\htdocs\hostel\public\index.php(25): App\Core\Router->dispatch('GET', '/users')
+#7 {main}
+  thrown in C:\xampp\htdocs\hostel\app\core\Database.php on line 37
+[03-Jul-2026 16:07:18 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\acad_test2.php:22) in C:\xampp\htdocs\hostel\app\core\Controller.php on line 15
+[03-Jul-2026 17:45:29 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\charge_test.php:12) in C:\xampp\htdocs\hostel\app\core\Csrf.php on line 36
+[03-Jul-2026 17:47:01 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\charge_one.php:11) in C:\xampp\htdocs\hostel\app\core\Controller.php on line 15
+[03-Jul-2026 20:27:22 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 14
+[03-Jul-2026 20:27:22 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 15
+[03-Jul-2026 20:27:22 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 16
+[03-Jul-2026 20:27:22 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 14
+[03-Jul-2026 20:27:22 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 15
+[03-Jul-2026 20:27:22 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 16
+[03-Jul-2026 20:27:22 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 14
+[03-Jul-2026 20:27:22 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 15
+[03-Jul-2026 20:27:22 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 16
+[03-Jul-2026 20:27:22 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 14
+[03-Jul-2026 20:27:22 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 15
+[03-Jul-2026 20:27:22 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 16
+[03-Jul-2026 20:27:22 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 14
+[03-Jul-2026 20:27:22 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 15
+[03-Jul-2026 20:27:22 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 16
+[03-Jul-2026 20:27:51 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 14
+[03-Jul-2026 20:27:51 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 15
+[03-Jul-2026 20:27:51 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 16
+[03-Jul-2026 20:27:51 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 14
+[03-Jul-2026 20:27:51 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 15
+[03-Jul-2026 20:27:51 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 16
+[03-Jul-2026 20:27:51 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 14
+[03-Jul-2026 20:27:51 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 15
+[03-Jul-2026 20:27:51 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 16
+[03-Jul-2026 20:27:51 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 14
+[03-Jul-2026 20:27:51 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 15
+[03-Jul-2026 20:27:51 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 16
+[03-Jul-2026 20:27:51 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 14
+[03-Jul-2026 20:27:51 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 15
+[03-Jul-2026 20:27:51 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\report_test.php:16) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 16
+[03-Jul-2026 20:27:51 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\tf.php:7) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 14
+[03-Jul-2026 20:27:51 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\tf.php:7) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 15
+[03-Jul-2026 20:27:51 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\tf.php:7) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 16
+[03-Jul-2026 20:27:51 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\tf.php:7) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 14
+[03-Jul-2026 20:27:51 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\tf.php:7) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 15
+[03-Jul-2026 20:27:51 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\tf.php:7) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 16

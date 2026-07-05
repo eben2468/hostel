@@ -1,0 +1,35 @@
+[2026-06-30 10:22:44] EMAIL (not sent - SMTP not configured)
+TO: student@chms.test
+SUBJECT: Payment received
+KNUSTPayment receivedWe received your payment of GH₵ 100.00. View your receipt.This is an automated message from KNUST.
+--------------------------------------------------
+[2026-06-30 17:51:39] EMAIL (not sent - SMTP not configured)
+TO: esi.appiah5@chms.test
+SUBJECT: Room allocated
+Valley View UniversityRoom allocatedYou have been allocated Room GF1. An invoice has been generated.This is an automated message from Valley View University.
+--------------------------------------------------
+[2026-07-01 01:55:24] EMAIL (not sent - SMTP not configured)
+TO: kwabena.boateng16@chms.test
+SUBJECT: Payment received
+Valley View UniversityPayment receivedWe received your payment of GH₵ 4,200.00. View your receipt.This is an automated message from Valley View University.
+--------------------------------------------------
+[2026-07-03 16:19:39] EMAIL (not sent - SMTP not configured)
+TO: eben@hostel.com
+SUBJECT: Room allocated
+Valley View UniversityRoom allocatedYou have been allocated Room GF1. An invoice has been generated.This is an automated message from Valley View University.
+--------------------------------------------------
+[2026-07-03 16:21:07] EMAIL (not sent - SMTP not configured)
+TO: eben@hostel.com
+SUBJECT: Application Approved
+Valley View UniversityApplication ApprovedYour hostel application has been approved.This is an automated message from Valley View University.
+--------------------------------------------------
+[2026-07-03 16:36:50] EMAIL (not sent - SMTP not configured)
+TO: eben@hostel.com
+SUBJECT: Payment received
+Valley View UniversityPayment receivedWe received your payment of GH₵ 1,500.00. View your receipt.This is an automated message from Valley View University.
+--------------------------------------------------
+[2026-07-03 18:50:52] EMAIL (not sent - SMTP not configured)
+TO: student@chms.test
+SUBJECT: Room allocated
+Nadics HostelRoom allocatedYou have been allocated Room A006. An invoice has been generated.This is an automated message from Nadics Hostel.
+--------------------------------------------------

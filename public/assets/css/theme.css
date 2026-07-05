@@ -1,0 +1,242 @@
+/* =====================================================================
+   CHMS — Design System / Theme polish layer
+   Build-less companion to the Tailwind CDN config in layouts/_head.php.
+   Plain CSS only (the Play CDN cannot process @apply in external files).
+   Everything is driven by the design tokens below so the whole UI can be
+   retuned from one place.
+   ===================================================================== */
+
+:root {
+    /* ---- Brand: corporate deep blue (mirrors the Tailwind `primary` scale) */
+    --c-primary-50:  #eff5fb;
+    --c-primary-100: #dbe8f5;
+    --c-primary-200: #bdd4ec;
+    --c-primary-300: #90b6dd;
+    --c-primary-400: #5c91c9;
+    --c-primary-500: #3a72b3;
+    --c-primary-600: #2b5b97;
+    --c-primary-700: #254a7a;
+    --c-primary-800: #233f66;
+    --c-primary-900: #203655;
+    --c-primary-950: #142339;
+
+    /* ---- Semantic */
+    --c-success: #16a34a;
+    --c-warning: #d97706;
+    --c-danger:  #dc2626;
+    --c-info:    #0284c7;
+
+    /* ---- Surfaces & ink (cool slate neutrals) */
+    --c-bg:        #f1f5f9;
+    --c-surface:   #ffffff;
+    --c-border:    #e2e8f0;
+    --c-ink:       #1e293b;
+    --c-ink-soft:  #475569;
+    --c-ink-mute:  #94a3b8;
+
+    /* ---- Radii */
+    --r-sm: 0.5rem;
+    --r-md: 0.75rem;
+    --r-lg: 1rem;
+    --r-xl: 1.25rem;
+
+    /* ---- Elevation (tinted with brand navy for cohesion) */
+    --shadow-xs:   0 1px 2px rgba(16, 33, 64, .05);
+    --shadow-card: 0 1px 3px rgba(16, 33, 64, .07), 0 1px 2px rgba(16, 33, 64, .04);
+    --shadow-pop:  0 10px 25px -5px rgba(16, 33, 64, .14), 0 8px 10px -6px rgba(16, 33, 64, .08);
+    --shadow-lift: 0 18px 40px -12px rgba(16, 33, 64, .22);
+
+    /* ---- Motion */
+    --ease-out: cubic-bezier(.22, 1, .36, 1);
+    --dur: 220ms;
+}
+
+/* ---------------------------------------------------------------------
+   Base typography & rendering
+   ------------------------------------------------------------------- */
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    letter-spacing: -0.011em;
+}
+
+h1, h2, h3, h4, .font-display {
+    font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+    letter-spacing: -0.02em;
+}
+
+/* Tabular figures for money / stats so numbers line up */
+.tnum, .stat-value, td.num, .num { font-variant-numeric: tabular-nums; }
+
+/* ---------------------------------------------------------------------
+   Custom scrollbars (subtle, brand-tinted)
+   ------------------------------------------------------------------- */
+* { scrollbar-width: thin; scrollbar-color: var(--c-primary-200) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb {
+    background: #cbd5e1; border-radius: 999px;
+    border: 3px solid transparent; background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--c-primary-300); background-clip: content-box; }
+
+/* ---------------------------------------------------------------------
+   Accessibility
+   ------------------------------------------------------------------- */
+.skip-link {
+    position: fixed; left: 1rem; top: -3rem; z-index: 100;
+    background: var(--c-primary-700); color: #fff;
+    padding: .6rem 1rem; border-radius: var(--r-sm);
+    box-shadow: var(--shadow-pop); transition: top var(--dur) var(--ease-out);
+}
+.skip-link:focus { top: 1rem; }
+
+.sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* Visible, consistent keyboard focus everywhere */
+a:focus-visible, button:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--c-primary-500);
+    outline-offset: 2px;
+    border-radius: var(--r-sm);
+}
+
+/* ---------------------------------------------------------------------
+   Reusable component classes (used by redesigned views)
+   ------------------------------------------------------------------- */
+
+/* Cards */
+.ui-card {
+    background: var(--c-surface);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-card);
+}
+.ui-card-hover { transition: transform var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out); }
+.ui-card-hover:hover { transform: translateY(-3px); box-shadow: var(--shadow-pop); }
+
+/* Stat card accent strip + icon tile */
+.stat-tile { position: relative; overflow: hidden; }
+.stat-tile::after {
+    content: ''; position: absolute; inset: 0 auto 0 0; width: 4px;
+    background: var(--accent, var(--c-primary-500));
+    opacity: .9;
+}
+
+/* Buttons */
+.btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+    font-weight: 600; font-size: .875rem; line-height: 1;
+    padding: .625rem 1rem; border-radius: var(--r-md);
+    transition: transform var(--dur) var(--ease-out), background var(--dur), box-shadow var(--dur);
+    cursor: pointer; border: 1px solid transparent; white-space: nowrap;
+}
+.btn:active { transform: translateY(1px) scale(.99); }
+.btn-primary {
+    background: linear-gradient(135deg, var(--c-primary-600), var(--c-primary-700));
+    color: #fff; box-shadow: 0 4px 12px -4px rgba(43, 91, 151, .5);
+}
+.btn-primary:hover { box-shadow: 0 8px 20px -6px rgba(43, 91, 151, .6); }
+.btn-ghost { background: var(--c-surface); color: var(--c-ink-soft); border-color: var(--c-border); }
+.btn-ghost:hover { background: #f8fafc; border-color: var(--c-primary-200); color: var(--c-primary-700); }
+
+/* Inputs — gentle, consistent focus */
+.ui-input {
+    width: 100%; padding: .6rem .8rem; font-size: .875rem;
+    background: var(--c-surface); color: var(--c-ink);
+    border: 1px solid var(--c-border); border-radius: var(--r-md);
+    transition: border-color var(--dur), box-shadow var(--dur);
+}
+.ui-input:hover { border-color: var(--c-primary-200); }
+.ui-input:focus {
+    outline: none; border-color: var(--c-primary-500);
+    box-shadow: 0 0 0 3px rgba(58, 114, 179, .18);
+}
+
+/* Soft progress / occupancy bars get a subtle sheen */
+.bar-track { background: #e2e8f0; border-radius: 999px; overflow: hidden; }
+.bar-fill {
+    background: linear-gradient(90deg, var(--c-primary-500), var(--c-primary-700));
+    border-radius: 999px; height: 100%;
+    transition: width 900ms var(--ease-out);
+}
+
+/* Glassmorphism (auth screens) */
+.glass {
+    background: rgba(255, 255, 255, .08);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, .15);
+}
+
+/* Gradient text accent */
+.gradient-text {
+    background: linear-gradient(120deg, var(--c-primary-500), var(--c-primary-800));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+/* Sticky table headers for long data tables */
+.ui-table thead th { position: sticky; top: 0; background: #f8fafc; z-index: 1; }
+.ui-table tbody tr { transition: background var(--dur); }
+.ui-table tbody tr:hover { background: var(--c-primary-50); }
+
+/* ---------------------------------------------------------------------
+   Animations
+   ------------------------------------------------------------------- */
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes fadeIn   { from { opacity: 0; } to { opacity: 1; } }
+@keyframes popIn    { 0% { opacity: 0; transform: scale(.94); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes shimmer  { 0% { background-position: -468px 0; } 100% { background-position: 468px 0; } }
+@keyframes floaty   { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
+/* Entrance: elements with .reveal animate up; stagger via inline --d */
+.reveal { opacity: 0; animation: fadeInUp .55s var(--ease-out) forwards; animation-delay: var(--d, 0ms); }
+.reveal-fade { opacity: 0; animation: fadeIn .6s ease forwards; animation-delay: var(--d, 0ms); }
+.pop-in { animation: popIn .4s var(--ease-out) both; }
+
+/* Skeleton shimmer (for any async/loading states) */
+.skeleton {
+    background: #e9eef5 linear-gradient(90deg, #e9eef5 0%, #f4f7fb 40%, #e9eef5 80%);
+    background-size: 800px 100%; animation: shimmer 1.4s infinite linear;
+    border-radius: var(--r-sm);
+}
+
+/* Nav link hover affordance */
+.nav-link { position: relative; transition: background var(--dur), color var(--dur); }
+.nav-link .nav-icon { transition: transform var(--dur) var(--ease-out); }
+.nav-link:hover .nav-icon { transform: translateX(2px) scale(1.08); }
+
+/* ---------------------------------------------------------------------
+   Print (clean reports / receipts)
+   ------------------------------------------------------------------- */
+@media print {
+    .no-print, aside, header.app-topbar, .app-footer, .skip-link { display: none !important; }
+    .app-main { margin: 0 !important; padding: 0 !important; max-width: none !important; }
+    body { background: #fff !important; }
+    .ui-card, .bg-white { box-shadow: none !important; border: 1px solid #ddd !important; }
+    /* Keep accent colours (stat tiles, bars, badges, charts) when printing. */
+    *, *::before, *::after { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    /* Don't split a card across pages. */
+    .ui-card { break-inside: avoid; page-break-inside: avoid; }
+    canvas { max-width: 100% !important; height: auto !important; }
+    /* Tighten the grid so more fits per printed page. */
+    .app-main .grid { gap: 0.5rem !important; }
+}
+
+/* ---------------------------------------------------------------------
+   Respect reduced-motion preferences
+   ------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+        animation-duration: .001ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important; scroll-behavior: auto !important;
+    }
+    .reveal, .reveal-fade { opacity: 1 !important; }
+}

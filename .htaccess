@@ -1,0 +1,12 @@
+# The project root forwards into the public front controller via index.php,
+# so the entry point can live outside public/. Canonical application URLs and
+# assets still live under /public (its own .htaccess handles pretty routing).
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # Let the bare root and /index.php be handled by the root front controller
+    # instead of redirecting into /public.
+    RewriteRule ^index\.php$ - [L]
+    RewriteRule ^$ - [L]
+</IfModule>
