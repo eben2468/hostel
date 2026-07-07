@@ -10,8 +10,25 @@
 define('APP_NAME', 'Complete Hostel Management System');
 define('APP_SHORT', 'CHMS');
 
-// Base URL of the public folder. The app lives under /hostel/public in XAMPP.
-define('BASE_URL', '/hostel/public');
+// Base URL of the public folder.
+//
+// Auto-detected from the web root so the same code works whether the app lives
+// in a subfolder (XAMPP serves it at /hostel/public) or at the domain root on a
+// live host (where it resolves to /public). It does this by taking the public
+// folder's real path and stripping the server's document root off the front.
+//
+// If your host has an unusual layout, you can hardcode it instead, e.g.:
+//     define('BASE_URL', '/public');
+if (!defined('BASE_URL')) {
+    $publicFs = str_replace('\\', '/', realpath(__DIR__ . '/../public') ?: __DIR__ . '/../public');
+    $docRoot  = str_replace('\\', '/', realpath($_SERVER['DOCUMENT_ROOT'] ?? '') ?: '');
+    if ($docRoot !== '' && str_starts_with($publicFs, $docRoot)) {
+        define('BASE_URL', rtrim(substr($publicFs, strlen($docRoot)), '/'));
+    } else {
+        // Fallback for CLI or unusual setups.
+        define('BASE_URL', '/hostel/public');
+    }
+}
 
 // Absolute filesystem paths
 define('ROOT_PATH', dirname(__DIR__));

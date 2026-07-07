@@ -41,7 +41,7 @@ class DashboardController extends Controller
             'payments_count'  => (int) Database::scalar("SELECT COUNT(*) FROM payments WHERE status='completed'{$pay}", $pb),
         ];
         $trend = Database::all(
-            "SELECT DATE_FORMAT(paid_at,'%b') AS label, COALESCE(SUM(amount),0) AS total
+            "SELECT DATE_FORMAT(MIN(paid_at),'%b') AS label, COALESCE(SUM(amount),0) AS total
              FROM payments WHERE status='completed' AND paid_at >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH){$pay}
              GROUP BY YEAR(paid_at), MONTH(paid_at) ORDER BY YEAR(paid_at), MONTH(paid_at)", $pb
         );
@@ -165,7 +165,7 @@ class DashboardController extends Controller
 
         // Revenue trend — last 6 months.
         $trend = Database::all(
-            "SELECT DATE_FORMAT(paid_at,'%b') AS label, COALESCE(SUM(amount),0) AS total
+            "SELECT DATE_FORMAT(MIN(paid_at),'%b') AS label, COALESCE(SUM(amount),0) AS total
              FROM payments
              WHERE status='completed' AND paid_at >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH){$pay}
              GROUP BY YEAR(paid_at), MONTH(paid_at) ORDER BY YEAR(paid_at), MONTH(paid_at)", $payB
