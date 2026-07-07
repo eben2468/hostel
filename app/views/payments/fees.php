@@ -36,7 +36,7 @@ $labels = ['single' => 'Single (One in a room)', 'double' => 'Double', 'triple' 
                     <div>
                         <label class="block text-sm font-medium text-gray-600 mb-1"><?= e($labels[$rt] ?? ucfirst($rt)) ?></label>
                         <div class="relative">
-                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"><?= CURRENCY_SYMBOL ?></span>
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"><?= CURRENCY_SIGN ?></span>
                             <input type="number" step="0.01" min="0" name="price_<?= $rt ?>"
                                    value="<?= isset($schedule[$rt]) ? e(number_format($schedule[$rt], 2, '.', '')) : '' ?>"
                                    class="ui-input pl-12" placeholder="0.00">

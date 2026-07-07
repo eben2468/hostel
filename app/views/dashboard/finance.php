@@ -11,7 +11,7 @@
         <div class="ui-card ui-card-hover stat-tile p-5 flex items-center gap-4" data-reveal="<?= $i ?>" style="--accent: <?= $accent ?>;">
             <div class="w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0" style="background: <?= $accent ?>1a; color: <?= $accent ?>;"><i class="fa-solid <?= $icon ?>"></i></div>
             <div class="min-w-0">
-                <p class="text-xl font-bold text-gray-800 tnum" data-count="<?= $val ?>" data-decimals="2" data-prefix="<?= CURRENCY_SYMBOL ?> ">0</p>
+                <p class="text-xl font-bold text-gray-800 tnum" data-count="<?= $val ?>" data-decimals="2" data-prefix="<?= CURRENCY_SIGN ?> ">0</p>
                 <p class="text-sm text-gray-500"><?= $label ?></p>
             </div>
         </div>
@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', function () {
         data:{ labels: <?= json_encode(array_column($trend,'label')) ?>,
             datasets:[{ label:'Revenue', data: <?= json_encode(array_map('floatval', array_column($trend,'total'))) ?>,
                 backgroundColor: B.primary, borderRadius: 8, maxBarThickness: 46 }] },
-        options:{ plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, border:{display:false}, ticks:{ callback:v=>'<?= CURRENCY_SYMBOL ?> '+v.toLocaleString() }}, x:{grid:{display:false}, border:{display:false}} } }
+        options:{ plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, border:{display:false}, ticks:{ callback:v=>'<?= CURRENCY_SIGN ?> '+v.toLocaleString() }}, x:{grid:{display:false}, border:{display:false}} } }
     });
     <?php if ($methods): ?>
     new Chart(document.getElementById('finMethods'), {

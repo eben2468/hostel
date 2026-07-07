@@ -4,7 +4,7 @@
         <span class="w-10 h-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center"><i class="fa-solid fa-sack-dollar"></i></span>
         <div>
             <p class="text-xs text-gray-500">Collected today</p>
-            <p class="font-bold text-green-600 tnum text-lg" data-count="<?= (float) $totalToday ?>" data-decimals="2" data-prefix="<?= CURRENCY_SYMBOL ?> ">0</p>
+            <p class="font-bold text-green-600 tnum text-lg" data-count="<?= (float) $totalToday ?>" data-decimals="2" data-prefix="<?= CURRENCY_SIGN ?> ">0</p>
         </div>
     </div>
     <div class="flex flex-wrap gap-2">

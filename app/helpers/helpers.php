@@ -84,7 +84,7 @@ function old(string $key, $default = '')
 /** Format an amount as currency. */
 function money($amount): string
 {
-    return CURRENCY_SYMBOL . ' ' . number_format((float) $amount, 2);
+    return CURRENCY_SIGN . ' ' . number_format((float) $amount, 2);
 }
 
 /** Format a datetime nicely. */

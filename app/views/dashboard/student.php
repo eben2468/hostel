@@ -31,7 +31,7 @@ $greet = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good ev
     <!-- Payment card -->
     <div class="ui-card ui-card-hover p-5" data-reveal="1">
         <h3 class="font-display font-bold text-gray-800 mb-3"><span class="inline-flex w-8 h-8 rounded-lg bg-green-50 text-green-600 items-center justify-center mr-2"><i class="fa-solid fa-money-bill-wave text-sm"></i></span>Balance</h3>
-        <p class="text-2xl font-bold tnum <?= $outstanding > 0 ? 'text-red-600' : 'text-green-600' ?>" data-count="<?= (float) $outstanding ?>" data-decimals="2" data-prefix="<?= CURRENCY_SYMBOL ?> ">0</p>
+        <p class="text-2xl font-bold tnum <?= $outstanding > 0 ? 'text-red-600' : 'text-green-600' ?>" data-count="<?= (float) $outstanding ?>" data-decimals="2" data-prefix="<?= CURRENCY_SIGN ?> ">0</p>
         <p class="text-sm text-gray-500"><?= $outstanding > 0 ? 'Outstanding' : 'All cleared' ?></p>
         <a href="<?= url('/payments') ?>" class="inline-flex items-center gap-1 mt-3 text-primary-600 text-sm font-medium hover:underline">View payments <i class="fa-solid fa-arrow-right text-xs"></i></a>
     </div>

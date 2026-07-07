@@ -42,11 +42,13 @@ define('APP_ENV', 'development');
 
 // Currency used across the finance module.
 define('CURRENCY', 'GHS');
-// The cedi glyph is written as its Unicode codepoint (U+20B5) so this whole
-// source file stays pure ASCII. Some upload/FTP tools corrupt raw multibyte
-// characters (which showed up as "262145" in front of amounts); PHP rebuilds
-// the correct UTF-8 cedi sign at runtime no matter how the file was transferred.
-define('CURRENCY_SYMBOL', "GH\u{20B5}");
+// NOTE: this is CURRENCY_SIGN, not CURRENCY_SYMBOL. Some PHP builds (e.g. PHP 8.4
+// with certain extensions) already define a global constant named CURRENCY_SYMBOL
+// (value 262145), and PHP's define() cannot override an existing constant — so
+// that name silently kept the extension's value and displayed "262145" before
+// every amount. Using our own name sidesteps the collision entirely.
+// The cedi glyph is written as its codepoint (U+20B5) so the file stays ASCII.
+define('CURRENCY_SIGN', "GH\u{20B5}");
 
 // Session lifetime (seconds) before forced re-login.
 define('SESSION_TIMEOUT', 60 * 60 * 2); // 2 hours

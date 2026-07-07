@@ -55,7 +55,7 @@ $cards = [
             <p class="text-sm text-gray-500">Revenue Today</p>
             <span class="w-8 h-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center"><i class="fa-solid fa-arrow-trend-up text-xs"></i></span>
         </div>
-        <p class="text-2xl font-bold text-green-600 mt-1 tnum" data-count="<?= (float) $stats['revenue_today'] ?>" data-decimals="2" data-prefix="<?= CURRENCY_SYMBOL ?> ">0</p>
+        <p class="text-2xl font-bold text-green-600 mt-1 tnum" data-count="<?= (float) $stats['revenue_today'] ?>" data-decimals="2" data-prefix="<?= CURRENCY_SIGN ?> ">0</p>
         <p class="text-xs text-gray-400 mt-1">This month: <span class="font-medium text-gray-500"><?= money($stats['revenue_month']) ?></span></p>
     </div>
     <div class="ui-card p-5" data-reveal="1">
@@ -63,7 +63,7 @@ $cards = [
             <p class="text-sm text-gray-500">Outstanding Balances</p>
             <span class="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center"><i class="fa-solid fa-receipt text-xs"></i></span>
         </div>
-        <p class="text-2xl font-bold text-red-600 mt-1 tnum" data-count="<?= (float) $stats['outstanding'] ?>" data-decimals="2" data-prefix="<?= CURRENCY_SYMBOL ?> ">0</p>
+        <p class="text-2xl font-bold text-red-600 mt-1 tnum" data-count="<?= (float) $stats['outstanding'] ?>" data-decimals="2" data-prefix="<?= CURRENCY_SIGN ?> ">0</p>
         <p class="text-xs text-gray-400 mt-1"><span class="font-medium text-gray-500"><?= (int) $stats['open_complaints'] ?></span> open complaints</p>
     </div>
     <div class="ui-card p-5 flex items-center gap-5" data-reveal="2">
@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', function () {
         options: {
             plugins: { legend: { display: false } },
             scales: {
-                y: { beginAtZero: true, border: { display: false }, ticks: { callback: v => '<?= CURRENCY_SYMBOL ?> ' + v.toLocaleString() } },
+                y: { beginAtZero: true, border: { display: false }, ticks: { callback: v => '<?= CURRENCY_SIGN ?> ' + v.toLocaleString() } },
                 x: { grid: { display: false }, border: { display: false } }
             }
         }
