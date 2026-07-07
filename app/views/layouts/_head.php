@@ -14,6 +14,12 @@ $pageTitle = $pageTitle ?? 'Dashboard';
 <meta name="color-scheme" content="light">
 <title><?= e($pageTitle) ?> · <?= e(brand_short()) ?></title>
 
+<!-- Favicon: a tight, square icon derived from the system logo -->
+<?php if ($faviconUrl = brand_favicon()): ?>
+    <link rel="icon" type="image/png" sizes="128x128" href="<?= e($faviconUrl) ?>">
+    <link rel="apple-touch-icon" href="<?= e($faviconUrl) ?>">
+<?php endif; ?>
+
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

@@ -2,13 +2,13 @@
 <div class="min-h-screen flex items-center justify-center px-4 py-10">
     <div class="w-full max-w-lg reveal">
         <div class="text-center mb-7">
-            <div class="inline-flex w-16 h-16 rounded-2xl bg-white/10 ring-1 ring-white/20 items-center justify-center shadow-lg backdrop-blur overflow-hidden">
-                <?php if ($brandLogo = brand_logo()): ?>
-                    <img src="<?= e($brandLogo) ?>" alt="Logo" class="w-full h-full object-contain p-1.5">
-                <?php else: ?>
+            <?php if ($brandLogo = brand_logo()): ?>
+                <img src="<?= e($brandLogo) ?>" alt="Logo" class="inline-block w-28 h-28 object-contain drop-shadow-xl">
+            <?php else: ?>
+                <div class="inline-flex w-16 h-16 rounded-2xl bg-white/10 ring-1 ring-white/20 items-center justify-center shadow-lg backdrop-blur">
                     <i class="fa-solid fa-user-plus text-2xl text-white"></i>
-                <?php endif; ?>
-            </div>
+                </div>
+            <?php endif; ?>
             <h1 class="mt-4 text-2xl font-display font-extrabold tracking-tight">Student Registration</h1>
             <p class="text-primary-200 text-sm mt-1"><?= e(brand_name()) ?></p>
         </div>

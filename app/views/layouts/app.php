@@ -36,13 +36,13 @@ $initial  = strtoupper(substr($user['name'] ?? 'U', 0, 1));
            :class="sidebar ? 'translate-x-0' : '-translate-x-full'"
            aria-label="Main navigation">
         <div class="h-16 flex items-center gap-3 px-5 border-b border-white/10">
-            <div class="w-9 h-9 rounded-xl bg-white/10 ring-1 ring-white/15 flex items-center justify-center overflow-hidden shrink-0">
-                <?php if ($brandLogo = brand_logo()): ?>
-                    <img src="<?= e($brandLogo) ?>" alt="Logo" class="w-full h-full object-cover">
-                <?php else: ?>
+            <?php if ($brandLogo = brand_logo()): ?>
+                <img src="<?= e($brandLogo) ?>" alt="Logo" class="w-12 h-12 rounded-xl object-cover shrink-0">
+            <?php else: ?>
+                <div class="w-9 h-9 rounded-xl bg-white/10 ring-1 ring-white/15 flex items-center justify-center shrink-0">
                     <i class="fa-solid fa-building-columns text-lg text-white"></i>
-                <?php endif; ?>
-            </div>
+                </div>
+            <?php endif; ?>
             <div class="leading-tight min-w-0">
                 <span class="block font-display font-extrabold text-white tracking-tight truncate"><?= e(brand_short()) ?></span>
                 <span class="block text-[10px] uppercase tracking-widest text-primary-300">Hostel Suite</span>

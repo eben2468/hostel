@@ -53,6 +53,16 @@ function brand_logo(): ?string
     return $logo !== null && $logo !== '' ? url('/uploads/' . $logo) : null;
 }
 
+/** URL of the tight favicon derived from the logo; falls back to the logo, then null. */
+function brand_favicon(): ?string
+{
+    $fav = brand_setting('system_favicon');
+    if ($fav !== null && $fav !== '') {
+        return url('/uploads/' . $fav);
+    }
+    return brand_logo();
+}
+
 /** Render the CSRF hidden field. */
 function csrf_field(): string
 {

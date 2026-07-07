@@ -77,4 +77,114 @@ class Upload
             @unlink($full);
         }
     }
+
+    /**
+     * Derive a tight, square favicon from a logo: trims the surrounding
+     * transparent (or uniform-colour) border and centres the mark on a square
+     * canvas so it fills the icon instead of looking tiny in the browser tab.
+     *
+     * @param string $logoRel logo path relative to uploads/
+     * @return string|null    new favicon path relative to uploads/, or null on failure
+     */
+    public static function makeFavicon(string $logoRel, int $size = 128, float $marginPct = 0.0): ?string
+    {
+        if (!function_exists('imagecreatetruecolor')) {
+            return null; // GD not available
+        }
+        $src = UPLOAD_PATH . '/' . $logoRel;
+        $info = is_file($src) ? @getimagesize($src) : false;
+        if (!$info) {
+            return null;
+        }
+        $im = match ($info['mime']) {
+            'image/png'  => @imagecreatefrompng($src),
+            'image/jpeg' => @imagecreatefromjpeg($src),
+            'image/webp' => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($src) : null,
+            default      => null,
+        };
+        if (!$im) {
+            return null;
+        }
+        $w = imagesx($im);
+        $h = imagesy($im);
+        imagealphablending($im, false);
+        imagesavealpha($im, true);
+
+        [$minX, $minY, $maxX, $maxY] = self::contentBox($im, $w, $h);
+        if ($maxX < $minX || $maxY < $minY) {   // nothing detected → use whole image
+            $minX = 0; $minY = 0; $maxX = $w - 1; $maxY = $h - 1;
+        }
+        $cw = $maxX - $minX + 1;
+        $ch = $maxY - $minY + 1;
+
+        // Square canvas sized to the content plus a small margin.
+        $side   = max(1, (int) round(max($cw, $ch) * (1 + $marginPct * 2)));
+        $canvas = imagecreatetruecolor($side, $side);
+        imagealphablending($canvas, false);
+        imagesavealpha($canvas, true);
+        imagefilledrectangle($canvas, 0, 0, $side, $side, imagecolorallocatealpha($canvas, 0, 0, 0, 127));
+        imagecopy($canvas, $im, (int) (($side - $cw) / 2), (int) (($side - $ch) / 2), $minX, $minY, $cw, $ch);
+
+        // Resample to the final favicon size.
+        $out = imagecreatetruecolor($size, $size);
+        imagealphablending($out, false);
+        imagesavealpha($out, true);
+        imagecopyresampled($out, $canvas, 0, 0, 0, 0, $size, $size, $side, $side);
+
+        $dir = UPLOAD_PATH . '/branding';
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+        $name = 'favicon_' . bin2hex(random_bytes(6)) . '.png';
+        $ok = imagepng($out, $dir . '/' . $name);
+        imagedestroy($im);
+        imagedestroy($canvas);
+        imagedestroy($out);
+        return $ok ? 'branding/' . $name : null;
+    }
+
+    /**
+     * Bounding box of the "real" content: opaque pixels when the image has
+     * transparency, otherwise pixels that differ from the top-left border colour.
+     *
+     * @return array{0:int,1:int,2:int,3:int} [minX, minY, maxX, maxY]
+     */
+    private static function contentBox($im, int $w, int $h): array
+    {
+        $minX = $w; $minY = $h; $maxX = -1; $maxY = -1; $anyAlpha = false;
+        for ($y = 0; $y < $h; $y++) {
+            for ($x = 0; $x < $w; $x++) {
+                $a = (imagecolorat($im, $x, $y) >> 24) & 0x7F; // 0 opaque .. 127 transparent
+                if ($a > 10) {
+                    $anyAlpha = true;
+                }
+                if ($a < 100) { // sufficiently opaque
+                    if ($x < $minX) $minX = $x;
+                    if ($x > $maxX) $maxX = $x;
+                    if ($y < $minY) $minY = $y;
+                    if ($y > $maxY) $maxY = $y;
+                }
+            }
+        }
+        if ($anyAlpha && $maxX >= $minX) {
+            return [$minX, $minY, $maxX, $maxY];
+        }
+
+        // Opaque image: trim a uniform border colour sampled from the corner.
+        $bg = imagecolorat($im, 0, 0);
+        $br = ($bg >> 16) & 0xFF; $bgc = ($bg >> 8) & 0xFF; $bb = $bg & 0xFF;
+        $minX = $w; $minY = $h; $maxX = -1; $maxY = -1;
+        for ($y = 0; $y < $h; $y++) {
+            for ($x = 0; $x < $w; $x++) {
+                $c = imagecolorat($im, $x, $y);
+                if (abs((($c >> 16) & 0xFF) - $br) > 18 || abs((($c >> 8) & 0xFF) - $bgc) > 18 || abs(($c & 0xFF) - $bb) > 18) {
+                    if ($x < $minX) $minX = $x;
+                    if ($x > $maxX) $maxX = $x;
+                    if ($y < $minY) $minY = $y;
+                    if ($y > $maxY) $maxY = $y;
+                }
+            }
+        }
+        return [$minX, $minY, $maxX, $maxY];
+    }
 }

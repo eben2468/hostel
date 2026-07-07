@@ -48,10 +48,15 @@ class SettingsController extends Controller
                 $this->redirect('/settings');
             }
             \App\Core\Upload::remove(Setting::get('system_logo'));
+            \App\Core\Upload::remove(Setting::get('system_favicon'));
             Setting::set('system_logo', $result['path']);
+            // Derive a tight favicon so the logo fills the browser tab.
+            Setting::set('system_favicon', \App\Core\Upload::makeFavicon($result['path']) ?? '');
         } elseif (isset($_POST['remove_logo'])) {
             \App\Core\Upload::remove(Setting::get('system_logo'));
+            \App\Core\Upload::remove(Setting::get('system_favicon'));
             Setting::set('system_logo', '');
+            Setting::set('system_favicon', '');
         }
 
         Audit::log('update', 'settings');
