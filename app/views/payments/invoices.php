@@ -1,7 +1,7 @@
 <?php /** @var array $invoices */ ?>
-<div class="flex items-center justify-between mb-4">
+<div class="flex flex-wrap items-center justify-between gap-2 mb-4">
     <a href="<?= url('/payments') ?>" class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary-600 transition"><i class="fa-solid fa-arrow-left"></i>Back to payments</a>
-    <div class="flex gap-2">
+    <div class="flex flex-wrap gap-2">
         <a href="<?= url('/export/invoices') ?>" class="btn btn-ghost"><i class="fa-solid fa-file-csv"></i> Export</a>
         <?php if (\App\Core\Auth::hasRole('admin','hostel_admin')): ?>
             <a href="<?= url('/fees') ?>" class="btn btn-ghost"><i class="fa-solid fa-tags"></i> Room Pricing</a>

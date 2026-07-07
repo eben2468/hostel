@@ -7,7 +7,7 @@
             <p class="font-bold text-green-600 tnum text-lg" data-count="<?= (float) $totalToday ?>" data-decimals="2" data-prefix="<?= CURRENCY_SYMBOL ?> ">0</p>
         </div>
     </div>
-    <div class="flex gap-2">
+    <div class="flex flex-wrap gap-2">
         <a href="<?= url('/export/payments') ?>" class="btn btn-ghost"><i class="fa-solid fa-file-csv"></i> Export</a>
         <a href="<?= url('/invoices') ?>" class="btn btn-ghost"><i class="fa-solid fa-file-invoice"></i> Invoices</a>
         <?php if (\App\Core\Auth::hasRole('admin','hostel_admin')): ?>

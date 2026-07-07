@@ -14,7 +14,7 @@ function val(?array $s, string $k): string { return e($s[$k] ?? old($k)); }
         <h3 class="font-display font-bold text-gray-800 border-b border-gray-100 pb-2.5 mb-4 flex items-center gap-2"><i class="fa-solid fa-image text-primary-500 text-sm"></i>Photo</h3>
         <div class="flex items-center gap-4">
             <?php $hasPhoto = $isEdit && !empty($student['photo']); ?>
-            <div class="w-20 h-20 rounded-full overflow-hidden bg-primary-100 text-primary-600 flex items-center justify-center text-2xl font-bold ring-2 ring-primary-200">
+            <div class="w-20 h-20 shrink-0 rounded-full overflow-hidden bg-primary-100 text-primary-600 flex items-center justify-center text-2xl font-bold ring-2 ring-primary-200">
                 <?php if ($hasPhoto): ?>
                     <img src="<?= url('/uploads/'.$student['photo']) ?>" alt="photo" class="w-full h-full object-cover">
                 <?php else: ?>

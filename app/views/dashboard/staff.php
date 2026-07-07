@@ -20,7 +20,7 @@ $cards = [
     <div class="relative flex flex-wrap items-end justify-between gap-4">
         <div>
             <p class="text-primary-200 text-sm"><?= $greet ?>,</p>
-            <h2 class="text-2xl sm:text-3xl font-display font-extrabold tracking-tight"><?= e($me['name'] ?? 'Administrator') ?> 👋</h2>
+            <h2 class="text-2xl sm:text-3xl font-display font-extrabold tracking-tight"><?= e($me['name'] ?? 'Administrator') ?></h2>
             <p class="text-primary-200 text-sm mt-1"><?= date('l, j F Y') ?> · Here's what's happening across your hostels.</p>
         </div>
         <a href="<?= url('/reports') ?>" class="btn bg-white/15 hover:bg-white/25 text-white ring-1 ring-white/20 backdrop-blur">

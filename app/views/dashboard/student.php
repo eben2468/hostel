@@ -9,7 +9,7 @@ $greet = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good ev
     <div aria-hidden="true" class="absolute -right-8 -top-8 w-40 h-40 rounded-full bg-white/10 blur-2xl"></div>
     <div class="relative">
         <p class="text-primary-200 text-sm"><?= $greet ?>,</p>
-        <h2 class="text-2xl font-display font-extrabold tracking-tight"><?= e($me['name'] ?? 'Student') ?> 👋</h2>
+        <h2 class="text-2xl font-display font-extrabold tracking-tight"><?= e($me['name'] ?? 'Student') ?></h2>
         <p class="text-primary-200 text-sm mt-1"><?= date('l, j F Y') ?></p>
     </div>
 </div>
