@@ -38,7 +38,11 @@ define('UPLOAD_PATH', ROOT_PATH . '/public/uploads');
 define('STORAGE_PATH', ROOT_PATH . '/storage');
 
 // Environment: 'development' shows errors, 'production' hides them.
-define('APP_ENV', 'development');
+// Auto-detected from the host so this file needs NO per-server editing (which
+// is what caused git-pull conflicts before): localhost/XAMPP runs as
+// development; any real domain runs as production and hides errors from users.
+$__host = strtolower(explode(':', $_SERVER['HTTP_HOST'] ?? '')[0]);
+define('APP_ENV', in_array($__host, ['localhost', '127.0.0.1', '::1'], true) ? 'development' : 'production');
 
 // Currency used across the finance module.
 define('CURRENCY', 'GHS');
