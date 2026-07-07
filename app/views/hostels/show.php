@@ -6,12 +6,12 @@ $floorsUrl = !empty($firstBlockId)
     ? url('/blocks/'.$firstBlockId.'/floors')
     : url('/hostels/'.$hostel['id'].'/blocks');
 ?>
-<div class="flex items-center justify-between mb-4">
-    <a href="<?= url('/hostels') ?>" class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary-600 transition"><i class="fa-solid fa-arrow-left"></i>Back</a>
-    <div class="flex gap-2">
-        <a href="<?= url('/hostels/'.$hostel['id'].'/blocks') ?>" class="btn bg-primary-50 text-primary-700 hover:bg-primary-100"><i class="fa-solid fa-layer-group"></i>Manage Blocks</a>
-        <a href="<?= $floorsUrl ?>" class="btn bg-primary-50 text-primary-700 hover:bg-primary-100"><i class="fa-solid fa-stairs"></i>Manage Floors</a>
-        <a href="<?= url('/hostels/'.$hostel['id'].'/edit') ?>" class="btn bg-amber-500 hover:bg-amber-600 text-white"><i class="fa-solid fa-pen"></i>Edit</a>
+<div class="flex flex-wrap items-center gap-2 mb-4">
+    <a href="<?= url('/hostels') ?>" class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 bg-white ring-1 ring-gray-200 shadow-sm rounded-lg px-3 py-2 hover:text-primary-600 hover:ring-primary-200 transition"><i class="fa-solid fa-arrow-left"></i>Back</a>
+    <a href="<?= url('/hostels/'.$hostel['id'].'/edit') ?>" class="btn bg-amber-500 hover:bg-amber-600 text-white shadow-sm"><i class="fa-solid fa-pen"></i>Edit</a>
+    <div class="flex flex-wrap items-center gap-2 sm:ml-auto">
+        <a href="<?= url('/hostels/'.$hostel['id'].'/blocks') ?>" class="btn bg-white ring-1 ring-gray-200 shadow-sm text-primary-700 hover:bg-primary-50 hover:ring-primary-200"><i class="fa-solid fa-layer-group"></i>Manage Blocks</a>
+        <a href="<?= $floorsUrl ?>" class="btn bg-white ring-1 ring-gray-200 shadow-sm text-primary-700 hover:bg-primary-50 hover:ring-primary-200"><i class="fa-solid fa-stairs"></i>Manage Floors</a>
     </div>
 </div>
 
@@ -19,16 +19,16 @@ $floorsUrl = !empty($firstBlockId)
     <div class="h-24 bg-gradient-to-br from-primary-600 to-primary-900 relative">
         <div aria-hidden="true" class="absolute inset-0 opacity-[0.07]" style="background-image:radial-gradient(#fff 1px,transparent 1px);background-size:16px 16px;"></div>
     </div>
-    <div class="p-6 -mt-12 relative">
-        <div class="flex flex-wrap items-start justify-between gap-3">
-            <div class="flex items-end gap-4">
-                <div class="w-20 h-20 rounded-2xl bg-white shadow-pop ring-1 ring-gray-100 flex items-center justify-center text-primary-600 text-3xl"><i class="fa-solid fa-building"></i></div>
-                <div class="pb-1">
-                    <h2 class="text-2xl font-display font-extrabold text-gray-800"><?= e($hostel['name']) ?></h2>
-                    <p class="text-gray-500 text-sm"><?= e($hostel['code']) ?> · <?= ucfirst($hostel['type']) ?> · Manager: <?= e($hostel['manager'] ?: '—') ?></p>
+    <div class="px-6 pb-6 pt-0 relative">
+        <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+            <div class="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4 min-w-0">
+                <div class="-mt-12 w-20 h-20 shrink-0 rounded-2xl bg-white shadow-pop ring-1 ring-gray-100 flex items-center justify-center text-primary-600 text-3xl"><i class="fa-solid fa-building"></i></div>
+                <div class="sm:pb-1 min-w-0">
+                    <h2 class="text-xl sm:text-2xl font-display font-extrabold text-gray-800 leading-tight break-words"><?= e($hostel['name']) ?></h2>
+                    <p class="text-gray-500 text-sm mt-0.5"><?= e($hostel['code']) ?> · <?= ucfirst($hostel['type']) ?> · Manager: <?= e($hostel['manager'] ?: '—') ?></p>
                 </div>
             </div>
-            <div class="pt-12"><?= status_badge($hostel['status']) ?></div>
+            <div class="shrink-0"><?= status_badge($hostel['status']) ?></div>
         </div>
         <p class="text-sm text-gray-500 mt-3"><i class="fa-solid fa-location-dot text-gray-400 mr-1"></i><?= e($hostel['address']) ?></p>
         <?php if ($hostel['description']): ?><p class="text-sm text-gray-600 mt-2"><?= e($hostel['description']) ?></p><?php endif; ?>
