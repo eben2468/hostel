@@ -25,6 +25,13 @@ $roomData = array_map(fn($r) => [
                     <?php endforeach; ?>
                 </select></div>
         <?php endif; ?>
+        <div><label class="block text-sm font-medium text-gray-600 mb-1">Preferred Room Type</label>
+            <select name="preferred_room_type" class="ui-input" x-model="roomType" @change="$refs.roomSel.value = ''">
+                <option value="">No preference</option>
+                <?php foreach (['single','double','triple','quad'] as $t): ?><option value="<?= $t ?>"><?= ucfirst($t) ?></option><?php endforeach; ?>
+            </select>
+            <p class="text-xs text-gray-400 mt-1">Filters the preferred room list.</p>
+        </div>
         <div><label class="block text-sm font-medium text-gray-600 mb-1">Preferred Room</label>
             <select name="preferred_room_id" class="ui-input" x-ref="roomSel">
                 <option value="">No preference</option>
@@ -34,13 +41,6 @@ $roomData = array_map(fn($r) => [
             </select>
             <?php if (!$isStaff && !$preferredRooms): ?><p class="text-xs text-gray-400 mt-1">No rooms currently available in your hostel — you can still apply without a preference.</p><?php endif; ?>
             <p x-cloak style="display:none" x-show="roomType && rooms.filter(x => x.type === roomType).length === 0" class="text-xs text-amber-600 mt-1">No <span x-text="roomType"></span> rooms available right now — pick another type or leave as “No preference”.</p>
-        </div>
-        <div><label class="block text-sm font-medium text-gray-600 mb-1">Preferred Room Type</label>
-            <select name="preferred_room_type" class="ui-input" x-model="roomType" @change="$refs.roomSel.value = ''">
-                <option value="">No preference</option>
-                <?php foreach (['single','double','triple','quad'] as $t): ?><option value="<?= $t ?>"><?= ucfirst($t) ?></option><?php endforeach; ?>
-            </select>
-            <p class="text-xs text-gray-400 mt-1">Filters the preferred room list above.</p>
         </div>
         <div class="sm:col-span-2"><label class="block text-sm font-medium text-gray-600 mb-1">Medical Conditions</label>
             <input name="medical_conditions" class="ui-input"></div>

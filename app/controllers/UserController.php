@@ -195,6 +195,81 @@ class UserController extends Controller
         $this->redirect('/users');
     }
 
+    // --- Impersonation ------------------------------------------------------
+
+    /**
+     * Step into another user's account without their password.
+     *
+     * Restricted to the super admin. Another `admin` is never a target: it would
+     * be a sideways move between equals and, with the return trip parked in the
+     * session, a way to muddle which account is really acting.
+     */
+    public function impersonate($id): void
+    {
+        $this->requireAuth('admin');
+        Csrf::check();
+
+        if (Auth::impersonating()) {
+            Session::flash('error', 'You are already signed in as another user. Return to your own account first.');
+            $this->redirect('/users');
+        }
+
+        $admin  = Auth::user();
+        $target = $this->users->find($id);
+
+        if (!$target) {
+            Session::flash('error', 'That user no longer exists.');
+            $this->redirect('/users');
+        }
+        if ((int) $target['id'] === (int) Auth::id()) {
+            Session::flash('error', 'You are already signed in as yourself.');
+            $this->redirect('/users');
+        }
+        if ($target['role'] === 'admin') {
+            Session::flash('error', 'Super admin accounts cannot be accessed this way.');
+            $this->redirect('/users');
+        }
+        if ((int) $target['is_active'] !== 1) {
+            Session::flash('error', 'That account is inactive. Re-activate it first to sign in as ' . $target['name'] . '.');
+            $this->redirect('/users');
+        }
+
+        // Logged while still acting as the admin, so the trail names who did it.
+        Audit::log('impersonate_start', 'users', $target['id'], 'Signed in as ' . $target['name'] . ' (' . $target['role'] . ')');
+
+        Auth::beginImpersonation($admin, $target);
+        Session::flash('success', 'You are now signed in as ' . $target['name'] . '.');
+        $this->redirect('/dashboard');
+    }
+
+    /** Hand the session back to the super admin who started the impersonation. */
+    public function stopImpersonating(): void
+    {
+        if (!Auth::impersonating()) {
+            $this->redirect('/dashboard');
+        }
+
+        $impersonatedId = Auth::id();
+        $admin = Database::first(
+            "SELECT * FROM users WHERE id = ? AND role = 'admin' AND is_active = 1 LIMIT 1",
+            [Auth::impersonatorId()]
+        );
+
+        // The admin account was deleted or disabled mid-session: end the session
+        // outright rather than leave someone stranded in another user's account.
+        if (!$admin) {
+            Auth::logout();
+            Session::start();
+            Session::flash('error', 'Your administrator account is no longer available. Please sign in again.');
+            $this->redirect('/login');
+        }
+
+        Auth::endImpersonation($admin);
+        Audit::log('impersonate_stop', 'users', $impersonatedId, 'Returned to own account');
+        Session::flash('success', 'Welcome back — you are signed in as yourself again.');
+        $this->redirect('/users');
+    }
+
     /**
      * Build the user attribute set with role/hostel authority enforced.
      * Returns null (after flashing an error) when the chosen role is not allowed.

@@ -11,8 +11,11 @@ use App\Models\Setting;
 
 // Maintenance mode: when enabled, students are shown an offline page.
 // Staff and admins continue to work normally; logout is always reachable.
+// A super admin who has stepped into a student account is exempt — the offline
+// page has no navigation, so it would otherwise trap them there.
 if (Auth::role() === 'student'
     && Setting::get('maintenance_mode') === '1'
+    && !Auth::impersonating()
     && !str_contains($_SERVER['REQUEST_URI'] ?? '', '/logout')) {
     http_response_code(503);
     View::render('errors/maintenance', [], 'blank');

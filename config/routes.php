@@ -163,6 +163,8 @@ $router->post('/users',             [UserController::class, 'store']);
 $router->get('/users/{id}/edit',    [UserController::class, 'edit']);
 $router->post('/users/{id}',        [UserController::class, 'update']);
 $router->post('/users/{id}/delete', [UserController::class, 'destroy']);
+$router->post('/users/{id}/impersonate', [UserController::class, 'impersonate']);
+$router->get('/impersonate/stop',        [UserController::class, 'stopImpersonating']);
 
 // --- Reports / Audit / Settings ---------------------------------------------
 $router->get('/reports',  [ReportController::class, 'index']);

@@ -167,6 +167,20 @@ $initial  = strtoupper(substr($user['name'] ?? 'U', 0, 1));
 
         <!-- Main content -->
         <main id="main-content" class="app-main flex-1 p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto" tabindex="-1">
+            <?php if (Auth::impersonating()): ?>
+                <!-- Always visible (never auto-dismissed) so the way back is never lost. -->
+                <div class="mb-4 flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900 shadow-sm" role="status">
+                    <i class="fa-solid fa-user-secret text-amber-500 mt-0.5 sm:mt-0"></i>
+                    <p class="flex-1 text-sm">
+                        You are signed in as <span class="font-semibold"><?= e($user['name'] ?? '') ?></span>
+                        (<?= e(role_label($role)) ?>) — viewing the system as they see it.
+                    </p>
+                    <a href="<?= url('/impersonate/stop') ?>"
+                       class="btn bg-amber-500 text-white hover:bg-amber-600 shrink-0 self-start sm:self-auto">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>Back to <?= e(Auth::impersonatorName()) ?>
+                    </a>
+                </div>
+            <?php endif; ?>
             <?php foreach ($flashes as $type => $msg): ?>
                 <?php
                     $tone = $type === 'success' ? ['green','fa-circle-check']

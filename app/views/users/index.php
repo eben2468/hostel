@@ -7,6 +7,9 @@ $roleLabels = [
     'maintenance' => 'Maintenance', 'security' => 'Security', 'student' => 'Student',
 ];
 $roleBadge = fn (string $role): string => $roleLabels[$role] ?? ucfirst($role);
+// Hostel admins also reach this page, but only the super admin may sign in as
+// another user, so the action is gated on the viewer's own role.
+$isSuperAdmin = Auth::hasRole('admin');
 $hasFilters = ($filters['q'] ?? '') !== '' || ($filters['role'] ?? '') !== '' || ($filters['hostel'] ?? '') !== '' || ($filters['status'] ?? '') !== '';
 ?>
 <div class="flex items-center justify-between mb-4">
@@ -100,6 +103,22 @@ $hasFilters = ($filters['q'] ?? '') !== '' || ($filters['role'] ?? '') !== '' ||
                         <td class="px-4 py-3 text-gray-500"><?= e($u['hostel_name'] ?? '— Global —') ?></td>
                         <td class="px-4 py-3"><?= status_badge((int)$u['is_active'] === 1 ? 'active' : 'inactive') ?></td>
                         <td class="px-4 py-3 text-right whitespace-nowrap">
+                            <?php
+                            // Only the super admin may step into an account, and never
+                            // into another super admin's or their own.
+                            $canImpersonate = $isSuperAdmin
+                                && $u['role'] !== 'admin'
+                                && (int) $u['id'] !== (int) Auth::id()
+                                && (int) $u['is_active'] === 1;
+                            ?>
+                            <?php if ($canImpersonate): ?>
+                                <form method="post" action="<?= url('/users/'.$u['id'].'/impersonate') ?>" class="inline"
+                                      onsubmit="return confirm('Sign in as <?= e(addslashes($u['name'])) ?>?\n\nYou will see the system exactly as they do, and can return to your own account at any time.');">
+                                    <?= csrf_field() ?>
+                                    <button class="inline-flex w-8 h-8 items-center justify-center rounded-lg text-gray-400 hover:bg-primary-50 hover:text-primary-600 transition"
+                                            aria-label="Sign in as <?= e($u['name']) ?>" title="Sign in as this user"><i class="fa-solid fa-right-to-bracket"></i></button>
+                                </form>
+                            <?php endif; ?>
                             <a href="<?= url('/users/'.$u['id'].'/edit') ?>" class="inline-flex w-8 h-8 items-center justify-center rounded-lg text-gray-400 hover:bg-amber-50 hover:text-amber-600 transition" aria-label="Edit" title="Edit"><i class="fa-solid fa-pen"></i></a>
                             <?php if ((int)$u['id'] !== (int)Auth::id()): ?>
                                 <form method="post" action="<?= url('/users/'.$u['id'].'/delete') ?>" class="inline" onsubmit="return confirm('Delete this user?');">

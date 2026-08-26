@@ -41,7 +41,14 @@ class Auth
         return true;
     }
 
-    public static function login(array $user): void
+    /**
+     * Put a user into the session.
+     *
+     * @param bool $recordLogin false when a super admin is stepping into the
+     *        account rather than the user signing in — stamping last_login_at
+     *        then would misreport when the person themselves was last here.
+     */
+    public static function login(array $user, bool $recordLogin = true): void
     {
         Session::regenerate();
         Session::set('user_id', (int) $user['id']);
@@ -55,12 +62,58 @@ class Auth
             $hostelId = $studentHostel !== false && $studentHostel !== null ? (int) $studentHostel : null;
         }
         Session::set('hostel_id', $hostelId);
-        Database::run("UPDATE users SET last_login_at = NOW() WHERE id = ?", [$user['id']]);
+        if ($recordLogin) {
+            Database::run("UPDATE users SET last_login_at = NOW() WHERE id = ?", [$user['id']]);
+        }
     }
 
     public static function logout(): void
     {
         Session::destroy();
+    }
+
+    // --- Impersonation ------------------------------------------------------
+    //
+    // A super admin can step into another account to see exactly what that user
+    // sees. The originating admin id is parked in the session so the trip is
+    // always reversible, and the session carries the target's role — so while
+    // impersonating a student the admin really is limited to a student's rights.
+
+    /** True while the session belongs to someone a super admin stepped into. */
+    public static function impersonating(): bool
+    {
+        return Session::has('impersonator_id');
+    }
+
+    /** The super admin behind the current session, or null when not impersonating. */
+    public static function impersonatorId(): ?int
+    {
+        $id = Session::get('impersonator_id');
+        return $id === null ? null : (int) $id;
+    }
+
+    /** Display name of the super admin behind the current session. */
+    public static function impersonatorName(): string
+    {
+        return (string) Session::get('impersonator_name', 'your account');
+    }
+
+    /** Remember who to return to, then step into the target account. */
+    public static function beginImpersonation(array $admin, array $target): void
+    {
+        self::login($target, false);
+        // Set after login(): regenerate() keeps session data, but writing these
+        // afterwards makes the order independent of that behaviour.
+        Session::set('impersonator_id', (int) $admin['id']);
+        Session::set('impersonator_name', (string) $admin['name']);
+    }
+
+    /** Return to the originating super admin account. */
+    public static function endImpersonation(array $admin): void
+    {
+        Session::forget('impersonator_id');
+        Session::forget('impersonator_name');
+        self::login($admin, false);
     }
 
     public static function check(): bool
