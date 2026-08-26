@@ -33,3 +33,43 @@ TO: student@chms.test
 SUBJECT: Room allocated
 Nadics HostelRoom allocatedYou have been allocated Room A006. An invoice has been generated.This is an automated message from Nadics Hostel.
 --------------------------------------------------
+[2026-08-26 20:39:26] EMAIL (not sent - SMTP not configured)
+FAILED TO: omazy48@gmail.com
+SUBJECT: Test email from Nadics Hostel
+ERROR: Invalid address:  (From): nadicshostel
+--------------------------------------------------
+[2026-08-26 20:40:20] EMAIL (not sent - SMTP not configured)
+FAILED TO: omazy48@gmail.com
+SUBJECT: Test email from Nadics Hostel
+ERROR: SMTP Error: Could not authenticate.
+--------------------------------------------------
+[2026-08-26 20:41:14] EMAIL (not sent - SMTP not configured)
+FAILED TO: omazy48@gmail.com
+SUBJECT: Test email from Nadics Hostel
+ERROR: Invalid address:  (From): nadicshostel
+--------------------------------------------------
+[2026-08-26 20:42:35] EMAIL (not sent - SMTP not configured)
+FAILED TO: omazy48@gmail.com
+SUBJECT: Test email from Nadics Hostel
+ERROR: Invalid address:  (From): nadicshostel
+--------------------------------------------------
+[2026-08-26 20:43:41] EMAIL (not sent - SMTP not configured)
+FAILED TO: omazy48@gmail.com
+SUBJECT: Test email from Nadics Hostel
+ERROR: SMTP Error: Could not authenticate.
+--------------------------------------------------
+[2026-08-26 20:44:56] EMAIL (not sent - SMTP not configured)
+FAILED TO: omazy48@gmail.com
+SUBJECT: Test email from Nadics Hostel
+ERROR: SMTP Error: Could not authenticate.
+--------------------------------------------------
+[2026-08-26 20:49:33] EMAIL (send FAILED)
+FAILED TO: omazy48@gmail.com
+SUBJECT: should fail
+ERROR: SMTP Error: Could not authenticate.
+--------------------------------------------------
+[2026-08-26 20:49:37] EMAIL (send FAILED)
+FAILED TO: omazy48@gmail.com
+SUBJECT: should fail
+ERROR: SMTP Error: Could not connect to SMTP host. Failed to connect to server SMTP server error: Failed to connect to server Additional SMTP info: php_network_getaddresses: getaddrinfo for smtp.example.com failed: No such host is known. 
+--------------------------------------------------

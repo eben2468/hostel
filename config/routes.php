@@ -33,6 +33,10 @@ use App\Controllers\PasswordResetController;
 $router->get('/',                 [AuthController::class, 'showLogin']);
 $router->get('/login',            [AuthController::class, 'showLogin']);
 $router->post('/login',           [AuthController::class, 'login']);
+$router->get('/login/verify',        [AuthController::class, 'showTwoFactor']);
+$router->post('/login/verify',       [AuthController::class, 'verifyTwoFactor']);
+$router->post('/login/verify/resend',[AuthController::class, 'resendTwoFactor']);
+$router->get('/login/verify/cancel', [AuthController::class, 'cancelTwoFactor']);
 $router->get('/register',         [AuthController::class, 'showRegister']);
 $router->post('/register',        [AuthController::class, 'register']);
 $router->get('/forgot-password',         [AuthController::class, 'showForgot']);
@@ -168,6 +172,7 @@ $router->post('/academic', [AcademicController::class, 'update']);
 $router->get('/audit',    [AuditController::class, 'index']);
 $router->get('/settings', [SettingsController::class, 'index']);
 $router->post('/settings',[SettingsController::class, 'update']);
+$router->post('/settings/test-email', [SettingsController::class, 'testEmail']);
 
 // --- CSV Exports ------------------------------------------------------------
 $router->get('/export/students',     [ExportController::class, 'students']);

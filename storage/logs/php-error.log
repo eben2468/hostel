@@ -97,3 +97,11 @@ Stack trace:
 [03-Jul-2026 20:27:51 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\tf.php:7) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 14
 [03-Jul-2026 20:27:51 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\tf.php:7) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 15
 [03-Jul-2026 20:27:51 Africa/Accra] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\EBENEZER OWUSU\AppData\Local\Temp\tf.php:7) in C:\xampp\htdocs\hostel\app\core\Csv.php on line 16
+[26-Aug-2026 20:39:26 Africa/Accra] Mailer failed: Invalid address:  (From): nadicshostel
+[26-Aug-2026 20:40:20 Africa/Accra] Mailer failed: SMTP Error: Could not authenticate.
+[26-Aug-2026 20:41:14 Africa/Accra] Mailer failed: Invalid address:  (From): nadicshostel
+[26-Aug-2026 20:42:35 Africa/Accra] Mailer failed: Invalid address:  (From): nadicshostel
+[26-Aug-2026 20:43:41 Africa/Accra] Mailer failed: SMTP Error: Could not authenticate.
+[26-Aug-2026 20:44:56 Africa/Accra] Mailer failed: SMTP Error: Could not authenticate.
+[26-Aug-2026 20:49:33 Africa/Accra] Mailer failed: SMTP Error: Could not authenticate.
+[26-Aug-2026 20:49:37 Africa/Accra] Mailer failed: SMTP Error: Could not connect to SMTP host. Failed to connect to server SMTP server error: Failed to connect to server Additional SMTP info: php_network_getaddresses: getaddrinfo for smtp.example.com failed: No such host is known. 

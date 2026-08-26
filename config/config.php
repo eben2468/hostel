@@ -61,6 +61,14 @@ define('SESSION_TIMEOUT', 60 * 60 * 2); // 2 hours
 define('MAX_LOGIN_ATTEMPTS', 5);
 define('LOCKOUT_MINUTES', 15);
 
+// Two-factor authentication (email one-time codes).
+// Which roles must use it, and where the codes are sent, are configured by an
+// administrator under System Settings — these are only the mechanics.
+define('TWOFA_CODE_LENGTH', 6);
+define('TWOFA_EXPIRY_MINUTES', 10);   // how long an emailed code stays valid
+define('TWOFA_MAX_ATTEMPTS', 5);      // wrong codes allowed before the code dies
+define('TWOFA_RESEND_SECONDS', 60);   // cooldown between "resend code" requests
+
 // Payment gateway (Paystack). Fill in real keys in System Settings later.
 define('PAYSTACK_PUBLIC_KEY', '');
 define('PAYSTACK_SECRET_KEY', '');

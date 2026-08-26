@@ -7,6 +7,7 @@ A modern, web-based hostel administration platform built with **plain PHP 8**, *
 | Area | Module |
 |------|--------|
 | **Auth** | Login, student self-registration, forgot-password, logout, account lockout, CSRF protection, RBAC, audit logging |
+| **Two-factor auth** | Optional email one-time codes at sign-in, switched on per role from Settings, with admin-set recipient mailboxes (Gmail SMTP supported) |
 | **Dashboards** | Distinct dashboards per role — admin/hostel (stats + charts), **finance** (revenue trend, methods, top debtors), **maintenance** (work queue by priority, by category), **security** (visitor queue + log), and a student portal |
 | **Pagination** | Server-side pagination on students, payments, allocations, applications, complaints, visitors & audit logs, preserving search/filter in the URL |
 | **Image uploads** | Validated student photos & profile avatars (JPG/PNG/WebP, ≤2 MB, real-image check), shown across lists, profiles & the topbar |
@@ -112,6 +113,7 @@ demo block is guarded by a `demo_seeded` flag and won't duplicate.
 - Output escaped via the `e()` helper (XSS protection).
 - Role-based middleware on every controller action.
 - Failed-login lockout and full audit trail.
+- Optional email two-factor authentication, per role (see below).
 
 ## Configuration
 
@@ -145,6 +147,44 @@ complaint update) are delivered across three channels: **in-app**, **email**, an
 - **SMS** — choose a provider (Arkesel or Hubtel), sender ID and API key under
   **Settings**. With no key, messages are written to `storage/logs/sms.log`.
   See [`app/services/Sms.php`](app/services/Sms.php).
+
+### Two-factor authentication (email codes)
+
+Selected roles must enter a 6-digit code emailed to them after their password is
+accepted. Nothing is signed in until the code is verified — codes are stored
+hashed, expire after 10 minutes, are single-use, and a wrong code counts towards
+the same lockout as a wrong password.
+
+Set it up as **admin → Settings**:
+
+1. **Email (SMTP)** — for Gmail, turn on 2-Step Verification for the Google
+   account, create an **App Password**, then use host `smtp.gmail.com`, port
+   `587`, the full Gmail address as username, and the 16-character App Password
+   as the password. Set the From Address to that same Gmail address.
+2. Use **Save & send test** to confirm mail actually leaves the server.
+3. **Two-Factor Authentication (Email)** — tick the roles that must be
+   challenged. Leave a role's *Send codes to* box blank to use each user's own
+   account email, or enter one or more comma-separated addresses to route that
+   role's codes to fixed mailboxes (useful for shared administrator accounts).
+4. Tick **Require an emailed code at sign-in** and save.
+
+The master switch refuses to turn on while SMTP is unconfigured or no role is
+selected, so an administrator cannot lock themselves out. Timings live in
+[`config/config.php`](config/config.php) (`TWOFA_*`); the logic is in
+[`app/services/TwoFactor.php`](app/services/TwoFactor.php).
+
+On an existing database, run the migration once:
+
+```bash
+mysql -u root -p < database/migration_two_factor.sql
+```
+
+If mail ever breaks while 2FA is on, it can be switched off straight from the
+database so nobody stays locked out:
+
+```sql
+UPDATE settings SET value = '0' WHERE `key` = 'twofa_enabled';
+```
 
 ### PDF receipts
 

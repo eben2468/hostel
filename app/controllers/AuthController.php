@@ -8,6 +8,7 @@ use App\Core\Session;
 use App\Core\Database;
 use App\Core\Audit;
 use App\Services\Notify;
+use App\Services\TwoFactor;
 
 class AuthController extends Controller
 {
@@ -36,14 +37,138 @@ class AuthController extends Controller
             $this->redirect('/login');
         }
 
-        if (Auth::attempt($login, $password)) {
+        // The password is checked without creating a session, so a role that
+        // requires two-factor authentication can be held at the code screen.
+        $user = Auth::verifyCredentials($login, $password);
+        if ($user) {
             $this->recordAttempt($login, true);
+            TwoFactor::clear();
+
+            if (TwoFactor::requiredFor($user)) {
+                $issued = TwoFactor::issue($user, $login);
+                if (!$issued['ok']) {
+                    Session::flash('error', $issued['error']);
+                    $this->redirect('/login');
+                }
+                $this->redirect('/login/verify');
+            }
+
+            Auth::login($user);
             Audit::log('login', 'auth');
             $this->redirect('/dashboard');
         }
 
         $this->recordAttempt($login, false);
         Session::flash('error', 'Invalid credentials or inactive account.');
+        $this->redirect('/login');
+    }
+
+    // --- Two-factor authentication -----------------------------------------
+
+    /** Step two of signing in: the emailed one-time code. */
+    public function showTwoFactor(): void
+    {
+        if (Auth::check()) {
+            $this->redirect('/dashboard');
+        }
+        if (!TwoFactor::pending()) {
+            Session::flash('error', 'Your verification session expired. Please sign in again.');
+            $this->redirect('/login');
+        }
+
+        $this->view('auth/twofactor', [
+            'pageTitle'   => 'Verify Sign In',
+            'recipients'  => TwoFactor::pendingRecipients(),
+            'resendWait'  => TwoFactor::resendWait(),
+        ], 'blank');
+    }
+
+    /** Check the submitted code and, on success, finally create the session. */
+    public function verifyTwoFactor(): void
+    {
+        Csrf::check();
+        if (!TwoFactor::pending()) {
+            TwoFactor::clear();
+            Session::flash('error', 'Your verification session expired. Please sign in again.');
+            $this->redirect('/login');
+        }
+
+        $login = TwoFactor::pendingLogin();
+        // A wrong code counts towards the same lockout as a wrong password, so
+        // the second factor cannot be brute-forced from a fresh challenge.
+        if ($login !== '' && $this->isLockedOut($login)) {
+            TwoFactor::clear();
+            Session::flash('error', 'Too many failed attempts. Please try again in ' . LOCKOUT_MINUTES . ' minutes.');
+            $this->redirect('/login');
+        }
+
+        $result = TwoFactor::verify((string) $this->input('code', ''));
+
+        if (!$result['ok']) {
+            if ($login !== '') {
+                $this->recordAttempt($login, false);
+            }
+            Session::flash('error', $result['error']);
+            if ($result['dead']) {
+                TwoFactor::clear();
+                $this->redirect('/login');
+            }
+            $this->redirect('/login/verify');
+        }
+
+        $userId = TwoFactor::pendingUserId();
+        $user = Database::first("SELECT * FROM users WHERE id = ? AND is_active = 1 LIMIT 1", [$userId]);
+        TwoFactor::clear();
+        if (!$user) {
+            Session::flash('error', 'Your account is no longer active. Please contact the administrator.');
+            $this->redirect('/login');
+        }
+
+        Auth::login($user);
+        Audit::log('login', 'auth', $user['id'], 'two-factor verified');
+        TwoFactor::prune();
+        $this->redirect('/dashboard');
+    }
+
+    /** Email a fresh code, subject to the resend cooldown. */
+    public function resendTwoFactor(): void
+    {
+        Csrf::check();
+        if (!TwoFactor::pending()) {
+            TwoFactor::clear();
+            Session::flash('error', 'Your verification session expired. Please sign in again.');
+            $this->redirect('/login');
+        }
+
+        $wait = TwoFactor::resendWait();
+        if ($wait > 0) {
+            Session::flash('error', "Please wait {$wait} more second" . ($wait === 1 ? '' : 's') . ' before requesting another code.');
+            $this->redirect('/login/verify');
+        }
+
+        $user = Database::first("SELECT * FROM users WHERE id = ? LIMIT 1", [TwoFactor::pendingUserId()]);
+        if (!$user) {
+            TwoFactor::clear();
+            Session::flash('error', 'Please sign in again.');
+            $this->redirect('/login');
+        }
+
+        $issued = TwoFactor::issue($user, TwoFactor::pendingLogin());
+        if (!$issued['ok']) {
+            TwoFactor::clear();
+            Session::flash('error', $issued['error']);
+            $this->redirect('/login');
+        }
+
+        Session::flash('success', 'A new verification code is on its way.');
+        $this->redirect('/login/verify');
+    }
+
+    /** Abandon a half-finished login. */
+    public function cancelTwoFactor(): void
+    {
+        TwoFactor::clear();
+        Session::flash('success', 'Sign-in cancelled.');
         $this->redirect('/login');
     }
 

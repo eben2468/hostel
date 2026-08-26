@@ -4,7 +4,16 @@ namespace App\Core;
 /** Authentication and current-user helpers. */
 class Auth
 {
-    public static function attempt(string $login, string $password): bool
+    /**
+     * Check a login/password pair without starting a session.
+     *
+     * Kept separate from attempt() so two-factor authentication can verify the
+     * password first and only sign the user in once the emailed code is
+     * confirmed.
+     *
+     * @return array|null the user row on success, null on bad or inactive credentials
+     */
+    public static function verifyCredentials(string $login, string $password): ?array
     {
         $user = Database::first(
             "SELECT * FROM users WHERE (username = ? OR email = ?) LIMIT 1",
@@ -12,9 +21,19 @@ class Auth
         );
 
         if (!$user || !password_verify($password, $user['password'])) {
-            return false;
+            return null;
         }
         if ((int) $user['is_active'] !== 1) {
+            return null;
+        }
+
+        return $user;
+    }
+
+    public static function attempt(string $login, string $password): bool
+    {
+        $user = self::verifyCredentials($login, $password);
+        if ($user === null) {
             return false;
         }
 
