@@ -173,10 +173,31 @@ selected, so an administrator cannot lock themselves out. Timings live in
 [`config/config.php`](config/config.php) (`TWOFA_*`); the logic is in
 [`app/services/TwoFactor.php`](app/services/TwoFactor.php).
 
-On an existing database, run the migration once:
+On an existing database, run the migration once. It carries no `USE` statement,
+so it applies to whichever database you point it at — on shared hosting the
+database is named by the control panel and the MySQL user has rights to that one
+only:
 
 ```bash
-mysql -u root -p < database/migration_two_factor.sql
+# local (XAMPP)
+mysql -u root -p chms_hostel < database/migration_two_factor.sql
+
+# live server — use your own database and user
+mysql -u YOUR_USER -p YOUR_DATABASE < database/migration_two_factor.sql
+```
+
+In **phpMyAdmin**: click your database in the left sidebar *first*, then
+**Import → choose the file → Go**. Importing without a database selected (or
+against a hardcoded name) gives
+`#1044 - Access denied for user '...' to database '...'`.
+
+The migration ends with a check that prints `1` and `3` when it worked:
+
+```sql
+SELECT
+    (SELECT COUNT(*) FROM information_schema.TABLES
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'two_factor_codes') AS two_factor_codes_table,
+    (SELECT COUNT(*) FROM settings WHERE `key` LIKE 'twofa%')              AS twofa_settings;
 ```
 
 If mail ever breaks while 2FA is on, it can be switched off straight from the

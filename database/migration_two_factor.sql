@@ -1,11 +1,18 @@
 -- ===========================================================================
 -- Two-Factor Authentication (email one-time codes)
 --
--- Run once on an existing installation:
---     mysql -u root -p < database/migration_two_factor.sql
--- Fresh installs get this from schema.sql automatically.
+-- Deliberately contains NO "USE <database>" line so it runs against whichever
+-- database is already selected. On shared hosting the database is named by the
+-- control panel (hostel, cpaneluser_hostel, ...) and the MySQL user has no
+-- rights to any other one, so a hardcoded name fails with
+--     #1044 - Access denied for user '...' to database 'chms_hostel'
+--
+-- phpMyAdmin : select your database in the left sidebar first, then
+--              Import -> choose this file -> Go.
+-- Command line: mysql -u USER -p DATABASE < database/migration_two_factor.sql
+--
+-- Safe to run more than once.
 -- ===========================================================================
-USE chms_hostel;
 
 CREATE TABLE IF NOT EXISTS two_factor_codes (
     id         INT AUTO_INCREMENT PRIMARY KEY,
@@ -23,7 +30,16 @@ CREATE TABLE IF NOT EXISTS two_factor_codes (
 
 -- Defaults for the System Settings screen. INSERT IGNORE keeps any values an
 -- administrator has already saved.
+--   twofa_enabled    master switch, "1" or "0"
+--   twofa_roles      CSV of roles that must complete 2FA, e.g. "admin,finance"
+--   twofa_recipients JSON map of role => override recipient email(s)
 INSERT IGNORE INTO settings (`key`, value) VALUES
-    ('twofa_enabled',    '0'),   -- master switch
-    ('twofa_roles',      ''),    -- CSV of roles that must complete 2FA, e.g. "admin,finance"
-    ('twofa_recipients', '');    -- JSON map of role => override recipient email(s)
+    ('twofa_enabled',    '0'),
+    ('twofa_roles',      ''),
+    ('twofa_recipients', '');
+
+-- Confirms the migration applied: expect one table row and three setting rows.
+SELECT
+    (SELECT COUNT(*) FROM information_schema.TABLES
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'two_factor_codes')  AS two_factor_codes_table,
+    (SELECT COUNT(*) FROM settings WHERE `key` LIKE 'twofa%')               AS twofa_settings;
