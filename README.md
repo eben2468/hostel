@@ -148,6 +148,43 @@ complaint update) are delivered across three channels: **in-app**, **email**, an
   **Settings**. With no key, messages are written to `storage/logs/sms.log`.
   See [`app/services/Sms.php`](app/services/Sms.php).
 
+### Sending through Gmail or a school (Google Workspace) account
+
+Google runs the same SMTP servers for personal Gmail and for Workspace domains,
+so both are configured identically under **Settings → Email (SMTP)**:
+
+| Field | Value |
+|---|---|
+| SMTP Host | `smtp.gmail.com` (or `smtp-relay.gmail.com` for a Workspace relay) |
+| SMTP Port | `587` |
+| SMTP Username | the **full address** — `hostel@gmail.com` *or* `noreply@vvu.edu.gh` |
+| SMTP Password | the 16-character **App Password**, never the account password |
+| From Address | the same account, or another address on the same domain |
+
+Sending from the school domain is worth doing: mail from `@vvu.edu.gh` to
+`@st.vvu.edu.gh` stays inside the same Workspace tenant, so codes are far less
+likely to be delayed or filtered than mail from an outside address.
+
+Two behaviours make the school case work:
+
+- A username typed without a domain takes the domain from the From Address, so
+  `noreply` + `noreply@vvu.edu.gh` signs in as `noreply@vvu.edu.gh`. Only when
+  there is no other clue is `@gmail.com` assumed.
+- A From Address on the **same domain** as the sign-in is sent as typed — the
+  normal Workspace "Send mail as" alias. A **different** domain is replaced by
+  the sign-in address and kept as the `Reply-To`, because Google silently
+  rewrites a From it cannot verify.
+
+> **If App Passwords are not offered** on a school account, a Workspace
+> administrator has switched them off for the organisation. Ask IT either to
+> permit App Passwords for that one sending account, or to enable the
+> `smtp-relay.gmail.com` relay for the server — both work here.
+
+Recipients are unrestricted: any valid address receives codes, including
+`ebenezer-owusu@st.vvu.edu.gh` and other subdomain school addresses. Set them
+per role under **Two-Factor Authentication**, or leave a role blank to use each
+user's own account email.
+
 ### Two-factor authentication (email codes)
 
 Selected roles must enter a 6-digit code emailed to them after their password is
@@ -157,10 +194,8 @@ the same lockout as a wrong password.
 
 Set it up as **admin → Settings**:
 
-1. **Email (SMTP)** — for Gmail, turn on 2-Step Verification for the Google
-   account, create an **App Password**, then use host `smtp.gmail.com`, port
-   `587`, the full Gmail address as username, and the 16-character App Password
-   as the password. Set the From Address to that same Gmail address.
+1. **Email (SMTP)** — see [Sending through Gmail or a school
+   account](#sending-through-gmail-or-a-school-google-workspace-account) below.
 2. Use **Save & send test** to confirm mail actually leaves the server.
 3. **Two-Factor Authentication (Email)** — tick the roles that must be
    challenged. Leave a role's *Send codes to* box blank to use each user's own

@@ -63,25 +63,32 @@ $g = fn(string $k, string $d='') => e($settings[$k] ?? $d);
             <div><label class="block text-sm font-medium text-gray-600 mb-1">SMTP Port</label>
                 <input name="smtp_port" value="<?= $g('smtp_port','587') ?>" class="ui-input" placeholder="587 (TLS) or 465 (SSL)"></div>
             <div><label class="block text-sm font-medium text-gray-600 mb-1">SMTP Username</label>
-                <input name="smtp_user" value="<?= $g('smtp_user') ?>" class="ui-input" placeholder="yourname@gmail.com">
-                <p class="text-xs text-gray-400 mt-1">The <strong>full email address</strong> — Gmail rejects a bare mailbox name.</p></div>
+                <input name="smtp_user" value="<?= $g('smtp_user') ?>" class="ui-input" placeholder="noreply@vvu.edu.gh">
+                <p class="text-xs text-gray-400 mt-1">The <strong>full email address</strong>, Gmail or school — Google rejects a bare mailbox name.</p></div>
             <div><label class="block text-sm font-medium text-gray-600 mb-1">SMTP Password</label>
                 <input type="password" name="smtp_pass" value="<?= $g('smtp_pass') ?>" class="ui-input" autocomplete="new-password">
                 <p class="text-xs text-gray-400 mt-1">Gmail: the 16-character App Password (spaces are removed automatically).</p></div>
             <div class="sm:col-span-2"><label class="block text-sm font-medium text-gray-600 mb-1">From Address</label>
-                <input name="smtp_from" value="<?= $g('smtp_from') ?>" class="ui-input" placeholder="no-reply@yourhostel.edu">
-                <p class="text-xs text-gray-400 mt-1">Gmail always sends as the account above; a different address here becomes the Reply-To.</p></div>
+                <input name="smtp_from" value="<?= $g('smtp_from') ?>" class="ui-input" placeholder="hostel@vvu.edu.gh">
+                <p class="text-xs text-gray-400 mt-1">On Google, another address on the same domain is used as typed; a different domain becomes the Reply-To instead.</p></div>
         </div>
         <p class="text-xs text-gray-400 mt-2">Leave blank to log emails to <code>storage/logs/mail.log</code> instead of sending.</p>
 
         <details class="mt-4 rounded-xl bg-gray-50 ring-1 ring-gray-200 px-4 py-3">
-            <summary class="text-sm font-medium text-gray-700 cursor-pointer"><i class="fa-brands fa-google text-red-500 mr-1.5"></i>Using a Gmail account</summary>
+            <summary class="text-sm font-medium text-gray-700 cursor-pointer"><i class="fa-brands fa-google text-red-500 mr-1.5"></i>Using a Gmail or school (Google Workspace) account</summary>
             <ol class="text-xs text-gray-500 mt-3 space-y-1.5 list-decimal ml-4">
-                <li>Turn on 2-Step Verification for the Google account at <code>myaccount.google.com/security</code>.</li>
+                <li>Sign in to the account that will send the mail — a personal Gmail, or the school account (e.g. <code>noreply@vvu.edu.gh</code>).</li>
+                <li>Turn on 2-Step Verification for it at <code>myaccount.google.com/security</code>.</li>
                 <li>Create an <strong>App Password</strong> (Security → App passwords) and copy the 16-character code.</li>
-                <li>Host <code>smtp.gmail.com</code>, port <code>587</code>, username the full Gmail address, password the App Password (not the account password).</li>
-                <li>Set the From Address to that same Gmail address — Gmail rewrites anything else.</li>
+                <li>Host <code>smtp.gmail.com</code>, port <code>587</code>, username the <strong>full address</strong>, password the App Password — never the account password.</li>
+                <li>From Address: the same account, or any other address on the <strong>same domain</strong> that Google knows as an alias. A different domain is replaced by the sign-in address and kept as the Reply-To, because Google will not send as a domain it cannot verify.</li>
             </ol>
+            <p class="text-xs text-gray-500 mt-3 pt-3 border-t border-gray-200">
+                <i class="fa-solid fa-graduation-cap text-primary-400 mr-1"></i><strong>School accounts:</strong>
+                a Workspace administrator can switch App Passwords off for the whole organisation. If step 3 offers no
+                App Password option, ask IT to allow it for this one account, or to set up the
+                <code>smtp-relay.gmail.com</code> relay — both work here.
+            </p>
         </details>
 
         <div class="flex flex-col sm:flex-row gap-2 mt-4 pt-4 border-t border-gray-100">

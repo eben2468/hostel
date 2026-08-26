@@ -105,3 +105,7 @@ Stack trace:
 [26-Aug-2026 20:44:56 Africa/Accra] Mailer failed: SMTP Error: Could not authenticate.
 [26-Aug-2026 20:49:33 Africa/Accra] Mailer failed: SMTP Error: Could not authenticate.
 [26-Aug-2026 20:49:37 Africa/Accra] Mailer failed: SMTP Error: Could not connect to SMTP host. Failed to connect to server SMTP server error: Failed to connect to server Additional SMTP info: php_network_getaddresses: getaddrinfo for smtp.example.com failed: No such host is known. 
+[26-Aug-2026 22:48:01 Africa/Accra] PHP Fatal error:  Uncaught Error: Call to undefined method App\Services\Mailer::isGmail() in C:\Users\EBENEZER\AppData\Local\Temp\claude\c--xampp-htdocs-hostel\d9efafc8-a972-4075-ad7b-ca52bd59d4a7\scratchpad\workspace_probe.php:38
+Stack trace:
+#0 {main}
+  thrown in C:\Users\EBENEZER\AppData\Local\Temp\claude\c--xampp-htdocs-hostel\d9efafc8-a972-4075-ad7b-ca52bd59d4a7\scratchpad\workspace_probe.php on line 38

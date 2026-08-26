@@ -29,44 +29,85 @@ class Mailer
     /**
      * The SMTP login name.
      *
-     * Gmail authenticates on the full address, so a bare mailbox name saved
-     * against smtp.gmail.com is completed rather than silently failing with
-     * "Username and Password not accepted".
+     * Google authenticates on the full address, so a bare mailbox name is
+     * completed rather than left to fail as "Username and Password not
+     * accepted". The domain comes from the From Address when one is set — a
+     * Google Workspace school signs in as name@school.edu.gh, not @gmail.com —
+     * and only falls back to gmail.com when there is no other clue.
      */
     public static function username(): string
     {
         $user = trim((string) (Setting::get('smtp_user') ?? ''));
-        if ($user !== '' && !str_contains($user, '@') && self::isGmail()) {
-            $user .= '@gmail.com';
+        if ($user === '' || str_contains($user, '@')) {
+            return $user;
         }
-        return $user;
+
+        $domain = self::domainOf(trim((string) (Setting::get('smtp_from') ?? '')));
+        if ($domain !== '') {
+            return $user . '@' . $domain;
+        }
+        return self::isGoogle() ? $user . '@gmail.com' : $user;
     }
 
-    /** True when the configured host is Gmail's SMTP service. */
-    public static function isGmail(): bool
+    /**
+     * True when the host is Google's SMTP service — the same servers serve
+     * personal Gmail and Google Workspace (smtp.gmail.com), plus the Workspace
+     * relay (smtp-relay.gmail.com).
+     */
+    public static function isGoogle(): bool
     {
-        return str_contains(strtolower((string) (Setting::get('smtp_host') ?? '')), 'gmail');
+        $host = strtolower(trim((string) (Setting::get('smtp_host') ?? '')));
+        return str_contains($host, 'gmail.com') || str_contains($host, 'googlemail.com');
     }
 
     /**
      * The address mail is sent from.
      *
-     * Gmail only lets you send as the account you authenticated with (or a
-     * verified alias) and rewrites anything else, so on Gmail the login address
-     * wins and a different configured From becomes the Reply-To instead.
+     * Google only lets you send as the account you signed in with or one of its
+     * verified aliases. Sending as another address in the SAME domain is the
+     * normal Workspace setup ("Send mail as", or the domain relay), so that is
+     * allowed through; a foreign domain would be silently rewritten by Google,
+     * so the sign-in address is used and the configured one becomes the
+     * Reply-To instead (see send()).
      */
     public static function fromAddress(): string
     {
-        $user = self::username();
-        $from = trim((string) (Setting::get('smtp_from') ?? ''));
+        $user      = self::username();
+        $userValid = filter_var($user, FILTER_VALIDATE_EMAIL) !== false;
+        $from      = trim((string) (Setting::get('smtp_from') ?? ''));
 
-        if (self::isGmail() && filter_var($user, FILTER_VALIDATE_EMAIL)) {
+        if (filter_var($from, FILTER_VALIDATE_EMAIL)) {
+            if (!self::isGoogle() || !$userValid || self::sameDomain($from, $user)) {
+                return $from;
+            }
             return $user;
         }
-        if (filter_var($from, FILTER_VALIDATE_EMAIL)) {
-            return $from;
-        }
-        return filter_var($user, FILTER_VALIDATE_EMAIL) ? $user : '';
+        return $userValid ? $user : '';
+    }
+
+    /**
+     * True for a consumer @gmail.com sign-in, false for a Google Workspace one
+     * (a school domain on the same servers) — they fail authentication for
+     * different reasons, so the advice differs.
+     */
+    public static function isPersonalGmail(): bool
+    {
+        $domain = self::domainOf(self::username());
+        return $domain === 'gmail.com' || $domain === 'googlemail.com';
+    }
+
+    /** Lower-cased domain part of an address, or '' when there isn't one. */
+    private static function domainOf(string $email): string
+    {
+        $at = strrpos($email, '@');
+        return $at === false ? '' : strtolower(substr($email, $at + 1));
+    }
+
+    /** True when two addresses share a mail domain (case-insensitively). */
+    private static function sameDomain(string $a, string $b): bool
+    {
+        $da = self::domainOf($a);
+        return $da !== '' && $da === self::domainOf($b);
     }
 
     /** Send an email. Returns true on success (or when logged in fallback mode). */
@@ -156,9 +197,15 @@ class Mailer
         $hint  = '';
 
         if (stripos($error, 'authenticate') !== false || stripos($error, 'Username and Password not accepted') !== false) {
-            $hint = self::isGmail()
-                ? 'Gmail rejected the login. The SMTP Username must be the complete address (e.g. name@gmail.com) and the password must be a 16-character App Password generated on that same account — not the account password.'
-                : 'The mail server rejected the username or password.';
+            if (self::isGoogle()) {
+                $hint = 'Google rejected the login. The SMTP Username must be the complete address (your full @gmail.com or school address such as name@vvu.edu.gh) and the password must be a 16-character App Password generated on that same account — not the account password.';
+                // Workspace adds a second failure mode a personal Gmail cannot have.
+                if (!self::isPersonalGmail()) {
+                    $hint .= ' On a Google Workspace (school) account the sign-in must have 2-Step Verification turned on, and the Workspace administrator must allow App Passwords for it.';
+                }
+            } else {
+                $hint = 'The mail server rejected the username or password.';
+            }
         } elseif (stripos($error, 'Invalid address') !== false) {
             $hint = 'One of the addresses is not valid — check the SMTP Username and From Address.';
         } elseif (stripos($error, 'connect') !== false || stripos($error, 'timed out') !== false) {
