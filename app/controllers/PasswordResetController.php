@@ -52,8 +52,8 @@ class PasswordResetController extends Controller
         }
 
         $password = $_POST['password'] ?? '';
-        if (strlen($password) < 6) {
-            Session::flash('error', 'The new password must be at least 6 characters.');
+        if (strlen($password) < MIN_PASSWORD_LENGTH) {
+            Session::flash('error', 'The new password must be at least ' . MIN_PASSWORD_LENGTH . ' characters.');
             $this->redirect('/password-requests');
         }
 

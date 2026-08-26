@@ -72,7 +72,7 @@
                 </div>
                 <div class="sm:col-span-2">
                     <label for="r-pass" class="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
-                    <input id="r-pass" type="password" name="password" required autocomplete="new-password" class="ui-input" placeholder="At least 6 characters">
+                    <input id="r-pass" type="password" name="password" required autocomplete="new-password" class="ui-input" placeholder="At least <?= MIN_PASSWORD_LENGTH ?> characters">
                 </div>
                 <button class="btn btn-primary sm:col-span-2 w-full py-3 text-base mt-1">
                     <i class="fa-solid fa-user-plus"></i>Create Account

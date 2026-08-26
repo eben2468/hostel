@@ -55,8 +55,8 @@ class ProfileController extends Controller
             Session::flash('error', 'Current password is incorrect.');
             $this->redirect('/profile');
         }
-        if (strlen($new) < 6) {
-            Session::flash('error', 'New password must be at least 6 characters.');
+        if (strlen($new) < MIN_PASSWORD_LENGTH) {
+            Session::flash('error', 'New password must be at least ' . MIN_PASSWORD_LENGTH . ' characters.');
             $this->redirect('/profile');
         }
         if ($new !== $confirm) {

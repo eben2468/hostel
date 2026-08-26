@@ -207,8 +207,8 @@ class AuthController extends Controller
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $errors['email'] = 'A valid email is required.';
         }
-        if (strlen($password) < 6) {
-            $errors['password'] = 'Password must be at least 6 characters.';
+        if (strlen($password) < MIN_PASSWORD_LENGTH) {
+            $errors['password'] = 'Password must be at least ' . MIN_PASSWORD_LENGTH . ' characters.';
         }
         // The chosen hostel must exist and be active.
         if ($hostelId && !Database::first("SELECT id FROM hostels WHERE id = ? AND status = 'active'", [$hostelId])) {
@@ -324,8 +324,8 @@ class AuthController extends Controller
 
         $password = $_POST['password'] ?? '';
         $confirm  = $_POST['password_confirm'] ?? '';
-        if (strlen($password) < 6) {
-            Session::flash('error', 'Password must be at least 6 characters.');
+        if (strlen($password) < MIN_PASSWORD_LENGTH) {
+            Session::flash('error', 'Password must be at least ' . MIN_PASSWORD_LENGTH . ' characters.');
             $this->redirect('/forgot-password/reset');
         }
         if ($password !== $confirm) {
@@ -409,6 +409,14 @@ class AuthController extends Controller
         );
     }
 
+    /**
+     * True when this attempt should be refused without checking the password.
+     *
+     * Two separate limits. The per-account one stops a single account being
+     * ground down; the per-IP one stops the other shape of the same attack —
+     * one password tried against hundreds of usernames, which never trips a
+     * per-account counter at all.
+     */
     private function isLockedOut(string $login): bool
     {
         $count = (int) Database::scalar(
@@ -416,6 +424,19 @@ class AuthController extends Controller
              WHERE login = ? AND success = 0 AND created_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)",
             [$login, LOCKOUT_MINUTES]
         );
-        return $count >= MAX_LOGIN_ATTEMPTS;
+        if ($count >= MAX_LOGIN_ATTEMPTS) {
+            return true;
+        }
+
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+        if ($ip === '') {
+            return false;
+        }
+        $fromIp = (int) Database::scalar(
+            "SELECT COUNT(*) FROM login_attempts
+             WHERE ip_address = ? AND success = 0 AND created_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)",
+            [$ip, LOCKOUT_MINUTES]
+        );
+        return $fromIp >= MAX_LOGIN_ATTEMPTS_PER_IP;
     }
 }

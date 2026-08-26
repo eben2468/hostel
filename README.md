@@ -107,13 +107,41 @@ demo block is guarded by a `demo_seeded` flag and won't duplicate.
 
 ## Security notes
 
-- Passwords hashed with bcrypt (`password_hash`).
+- Passwords hashed with bcrypt (`password_hash`), minimum length `MIN_PASSWORD_LENGTH`.
 - All queries use PDO prepared statements.
 - CSRF tokens on every state-changing form.
 - Output escaped via the `e()` helper (XSS protection).
 - Role-based middleware on every controller action.
-- Failed-login lockout and full audit trail.
+- Failed-login lockout — per account **and** per source IP — plus a full audit trail.
 - Optional email two-factor authentication, per role (see below).
+- Uploads: extension allow-list, real-image check, random filenames, and PHP
+  execution denied under `/uploads`.
+- Session cookie is `HttpOnly`, `SameSite=Lax`, and `Secure` whenever the
+  request arrives over TLS; `session.use_strict_mode` blocks session fixation.
+- `Referer` is never followed as a redirect target — see `App\Core\Url::safeReferer()`.
+
+### The web-root boundary (important when deploying)
+
+Only `index.php` and everything under `public/` are meant to be reachable over
+HTTP. Everything else — `app/`, `config/`, `database/`, `storage/`, `vendor/`
+and **`.git/`** — sits beside them on disk because the app is installed at the
+domain root on shared hosting, and is blocked by the root
+[`.htaccess`](.htaccess).
+
+`.git/` is the one that matters most. It is not just metadata: anyone can read
+`.git/index` and `.git/objects/…` and rebuild the entire source tree from them,
+`config/database.php` and its credentials included. Verify after every deploy:
+
+```bash
+curl -o /dev/null -w '%{http_code}\n' https://yourdomain/.git/config          # expect 403
+curl -o /dev/null -w '%{http_code}\n' https://yourdomain/storage/logs/mail.log # expect 403
+curl -o /dev/null -w '%{http_code}\n' https://yourdomain/database/schema.sql   # expect 403
+```
+
+Anything other than `403`/`404` means the host is ignoring `.htaccess`
+(`AllowOverride None`) — ask them to enable it, or point the domain's document
+root at `public/` instead. Better still, do not deploy by `git pull`: export a
+clean copy (`git archive`) so `.git/` never reaches the server at all.
 
 ## Configuration
 

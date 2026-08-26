@@ -20,7 +20,7 @@
                     <div class="relative">
                         <i class="fa-solid fa-lock absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
                         <input id="password" :type="show ? 'text':'password'" name="password" required autocomplete="new-password"
-                               class="ui-input pl-10 pr-10" placeholder="At least 6 characters">
+                               class="ui-input pl-10 pr-10" placeholder="At least <?= MIN_PASSWORD_LENGTH ?> characters">
                         <button type="button" @click="show=!show" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary-600 p-1" :aria-label="show ? 'Hide password' : 'Show password'">
                             <i class="fa-solid" :class="show ? 'fa-eye-slash':'fa-eye'"></i>
                         </button>

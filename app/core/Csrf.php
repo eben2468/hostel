@@ -32,8 +32,7 @@ class Csrf
         if (!self::verify($token)) {
             http_response_code(419);
             Session::flash('error', 'Your session expired or the request was invalid. Please try again.');
-            $back = $_SERVER['HTTP_REFERER'] ?? BASE_URL . '/';
-            header('Location: ' . $back);
+            header('Location: ' . BASE_URL . Url::safeReferer());
             exit;
         }
     }

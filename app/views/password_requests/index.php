@@ -64,7 +64,7 @@ $isGlobal = Auth::hasRole('admin');
                     <?= csrf_field() ?>
                     <div class="flex-1">
                         <label class="block text-sm font-medium text-gray-600 mb-1.5">New password for this student</label>
-                        <input name="password" required minlength="6" class="ui-input" autocomplete="new-password" placeholder="At least 6 characters">
+                        <input name="password" required minlength="<?= MIN_PASSWORD_LENGTH ?>" class="ui-input" autocomplete="new-password" placeholder="At least <?= MIN_PASSWORD_LENGTH ?> characters">
                     </div>
                     <button class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i>Set Password</button>
                 </form>

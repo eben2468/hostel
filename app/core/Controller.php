@@ -18,7 +18,8 @@ abstract class Controller
 
     protected function back(): void
     {
-        $this->redirect($_SERVER['HTTP_REFERER'] ?? '/');
+        // Never trust Referer as a destination — see Url::safeReferer().
+        $this->redirect(Url::safeReferer());
     }
 
     protected function json($data, int $status = 200): void

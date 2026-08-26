@@ -38,11 +38,23 @@ define('UPLOAD_PATH', ROOT_PATH . '/public/uploads');
 define('STORAGE_PATH', ROOT_PATH . '/storage');
 
 // Environment: 'development' shows errors, 'production' hides them.
-// Auto-detected from the host so this file needs NO per-server editing (which
-// is what caused git-pull conflicts before): localhost/XAMPP runs as
-// development; any real domain runs as production and hides errors from users.
-$__host = strtolower(explode(':', $_SERVER['HTTP_HOST'] ?? '')[0]);
-define('APP_ENV', in_array($__host, ['localhost', '127.0.0.1', '::1'], true) ? 'development' : 'production');
+// Auto-detected so this file needs NO per-server editing (which is what caused
+// git-pull conflicts before).
+//
+// The signal is deliberately NOT the Host header. HTTP_HOST is supplied by the
+// client, so `Host: localhost` sent to the live site used to flip it into
+// development mode and print stack traces, queries and filesystem paths to
+// whoever asked. SERVER_ADDR is set by the web server itself and cannot be
+// forged, and requiring the caller to be on the loopback interface too means
+// only someone already on the machine can see errors.
+$__loopback = static function (string $ip): bool {
+    return $ip === '::1' || str_starts_with($ip, '127.');
+};
+define('APP_ENV',
+    PHP_SAPI === 'cli'
+    || ($__loopback($_SERVER['SERVER_ADDR'] ?? '') && $__loopback($_SERVER['REMOTE_ADDR'] ?? ''))
+        ? 'development'
+        : 'production');
 
 // Currency used across the finance module.
 define('CURRENCY', 'GHS');
@@ -59,7 +71,16 @@ define('SESSION_TIMEOUT', 60 * 60 * 2); // 2 hours
 
 // Failed login attempts before a temporary lockout.
 define('MAX_LOGIN_ATTEMPTS', 5);
+// Separate, looser ceiling per source address. Catches one password sprayed
+// across many usernames, which never trips the per-account counter. Set well
+// above MAX_LOGIN_ATTEMPTS so a shared campus NAT does not lock out a whole
+// building because of one person's typos.
+define('MAX_LOGIN_ATTEMPTS_PER_IP', 30);
 define('LOCKOUT_MINUTES', 15);
+
+// Minimum password length accepted when setting or changing a password.
+// Existing shorter passwords keep working until they are next changed.
+define('MIN_PASSWORD_LENGTH', 8);
 
 // Two-factor authentication (email one-time codes).
 // Which roles must use it, and where the codes are sent, are configured by an

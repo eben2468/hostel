@@ -3,10 +3,70 @@
 # assets still live under /public (its own .htaccess handles pretty routing).
 DirectoryIndex index.php
 
+# Never advertise the contents of a directory that has no index file.
+Options -Indexes
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # ------------------------------------------------------------------
+    # Security boundary. These rules come FIRST so nothing below can serve
+    # them. Only index.php and everything under public/ are meant to be
+    # web-reachable; the rest of the project sits beside them on disk
+    # because the app is installed at the domain root on shared hosting.
+    #
+    # .git is the dangerous one: it is not "just metadata". Anyone can walk
+    # .git/index and .git/objects to rebuild the entire source tree,
+    # config/database.php and its credentials included.
+    # ------------------------------------------------------------------
+    RewriteRule ^(\.git|\.github|app|config|database|storage|vendor|node_modules|tests)(/|$) - [F,L]
+
+    # Any dotfile or dot-directory at any depth (.env, .git, .htpasswd, ...).
+    RewriteRule (^|/)\.(?!well-known/) - [F,L]
+
     # Let the bare root and /index.php be handled by the root front controller
     # instead of redirecting into /public.
     RewriteRule ^index\.php$ - [L]
     RewriteRule ^$ - [L]
+</IfModule>
+
+# Belt and braces for hosts where mod_rewrite is unavailable: block the file
+# types that carry source, schema, credentials or logs.
+<FilesMatch "\.(sql|log|md|json|lock|ini|yml|yaml|bak|old|sh|dist|example|sqlite|db)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Same, for anything beginning with a dot.
+<FilesMatch "^\.">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Security headers for requests answered at the root (deep links under
+# /public get the same set from public/.htaccess).
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()"
+    # Sent only over TLS, so a plain-HTTP local install is unaffected.
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" "expr=%{HTTPS} == 'on'"
+    # PHP's own banner leaks the exact version to fingerprinting scanners.
+    Header always unset X-Powered-By
+</IfModule>
+
+# Keep PHP from announcing its version in response headers.
+<IfModule mod_php.c>
+    php_flag expose_php off
 </IfModule>
