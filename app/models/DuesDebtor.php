@@ -23,6 +23,55 @@ class DuesDebtor extends Model
     /** Semesters a debt can be recorded against, matching the Academic screen. */
     public const SEMESTERS = ['First', 'Second', 'Third'];
 
+    /**
+     * True when this feature's tables have been migrated in.
+     *
+     * Checked so the Debtors screen can explain itself instead of throwing on a
+     * deployment where the code is live but the migration has not been run yet.
+     */
+    public static function installed(): bool
+    {
+        static $installed = null;
+        if ($installed === null) {
+            try {
+                $installed = (int) Database::scalar(
+                    "SELECT COUNT(*) FROM information_schema.TABLES
+                     WHERE TABLE_SCHEMA = DATABASE()
+                       AND TABLE_NAME IN ('dues_debtors', 'dues_debtor_batches')"
+                ) === 2;
+            } catch (\Throwable $e) {
+                $installed = false;
+            }
+        }
+        return $installed;
+    }
+
+    /**
+     * "Base table or view not found" — the one error we tolerate, and only so a
+     * half-finished deployment cannot take down pages that merely *consult*
+     * this feature. Everything else is re-thrown untouched.
+     */
+    private static function isMissingTable(\PDOException $e): bool
+    {
+        return ($e->getCode() === '42S02')
+            && (str_contains($e->getMessage(), 'dues_debtors') || str_contains($e->getMessage(), 'dues_debtor_batches'));
+    }
+
+    /** Run a debtors query, degrading to $fallback when the tables are absent. */
+    private static function guarded(callable $query, array $fallback = [])
+    {
+        try {
+            return $query();
+        } catch (\PDOException $e) {
+            if (self::isMissingTable($e)) {
+                error_log('Hall dues debtors tables are missing — run database/migration_dues_debtors.sql. '
+                    . 'Arrears checks are inactive until then.');
+                return $fallback;
+            }
+            throw $e;
+        }
+    }
+
     /** Marks the batch that collects rows typed in by hand rather than uploaded. */
     private const MANUAL_FILE = '(added by hand)';
 
@@ -194,12 +243,12 @@ class DuesDebtor extends Model
             $params[] = (int) $student['hostel_id'];
         }
 
-        return Database::all(
+        return self::guarded(fn() => Database::all(
             "SELECT * FROM dues_debtors
              WHERE status = 'outstanding' AND (" . implode(' OR ', $keys) . "){$hostelSql}
              ORDER BY academic_year DESC, semester DESC, id",
             $params
-        );
+        ));
     }
 
     /** Total still owed across the matched rows. */
@@ -284,7 +333,7 @@ class DuesDebtor extends Model
             array_push($params, $like, $like, $like);
         }
         $sql .= " GROUP BY d.id ORDER BY d.status, d.academic_year DESC, d.semester DESC, d.full_name";
-        return Database::all($sql, $params);
+        return self::guarded(fn() => Database::all($sql, $params));
     }
 
     /** Upload batches for a hostel, newest first. */
@@ -302,6 +351,6 @@ class DuesDebtor extends Model
             $params[] = $hostelId;
         }
         $sql .= " ORDER BY b.created_at DESC";
-        return Database::all($sql, $params);
+        return self::guarded(fn() => Database::all($sql, $params));
     }
 }

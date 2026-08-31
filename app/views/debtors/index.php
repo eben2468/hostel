@@ -1,6 +1,7 @@
-<?php /** @var ?array $hostels @var int $hostelId @var array $debtors @var array $batches @var string $status @var string $q */
+<?php /** @var ?array $hostels @var int $hostelId @var array $debtors @var array $batches @var string $status @var string $q @var bool $installed */
 use App\Core\Scope;
 $isGlobal = Scope::isGlobal();
+$installed = $installed ?? true;
 $qs = $isGlobal && $hostelId ? '?hostel_id=' . $hostelId : '';
 
 $outstanding = array_filter($debtors, fn($d) => $d['status'] === 'outstanding');
@@ -12,13 +13,38 @@ $owed        = array_sum(array_map(fn($d) => (float) ($d['amount'] ?? 0), $outst
         <h2 class="font-display font-bold text-gray-800">Hall Dues Debtors</h2>
         <p class="text-xs text-gray-400 mt-0.5">Students carried over from previous semesters. Anyone still outstanding here cannot apply for a room.</p>
     </div>
-    <?php if ($hostelId): ?>
+    <?php if ($hostelId && $installed): ?>
         <div class="flex flex-wrap gap-2">
             <a href="<?= url('/debtors/create' . $qs) ?>" class="btn btn-ghost"><i class="fa-solid fa-user-plus"></i> Add Debtor</a>
             <a href="<?= url('/debtors/upload') ?>" class="btn btn-primary"><i class="fa-solid fa-file-arrow-up"></i> Upload List</a>
         </div>
     <?php endif; ?>
 </div>
+
+<?php if (!$installed): ?>
+    <div class="ui-card p-6 border-amber-200">
+        <div class="flex items-start gap-3">
+            <span class="inline-flex w-10 h-10 shrink-0 rounded-xl bg-amber-50 text-amber-600 items-center justify-center"><i class="fa-solid fa-database"></i></span>
+            <div class="min-w-0">
+                <h3 class="font-display font-bold text-gray-800">Database migration not run yet</h3>
+                <p class="text-sm text-gray-600 mt-1">
+                    The code for this feature is deployed, but its two tables
+                    (<span class="font-mono text-xs">dues_debtors</span>, <span class="font-mono text-xs">dues_debtor_batches</span>)
+                    do not exist in this database yet. Import
+                    <span class="font-mono text-xs">database/migration_dues_debtors.sql</span> once and reload this page.
+                </p>
+                <p class="text-sm text-gray-500 mt-3">
+                    In <span class="font-medium">phpMyAdmin</span>: click your database in the left sidebar <em>first</em>, then
+                    <span class="font-medium">Import → choose the file → Go</span>. The file names no database, so it applies to
+                    whichever one you have selected.
+                </p>
+                <p class="text-xs text-gray-400 mt-3">
+                    Until then, arrears checks are inactive — no student is blocked from applying, and the rest of the system works normally.
+                </p>
+            </div>
+        </div>
+    </div>
+<?php else: ?>
 
 <?php if ($isGlobal): ?>
     <form method="get" action="<?= url('/debtors') ?>" class="ui-card p-5 mb-4">
@@ -192,4 +218,5 @@ $owed        = array_sum(array_map(fn($d) => (float) ($d['amount'] ?? 0), $outst
     </div>
 </div>
 
-<?php endif; ?>
+<?php endif; /* hostel chosen */ ?>
+<?php endif; /* tables installed */ ?>

@@ -28,6 +28,9 @@ class DebtorController extends Controller
 
         $this->view('debtors/index', [
             'pageTitle' => 'Hall Dues Debtors',
+            // A deployment where the code is live but the migration has not been
+            // run says so, rather than throwing.
+            'installed' => DuesDebtor::installed(),
             'hostels'   => Scope::isGlobal() ? (new Hostel())->all('name') : null,
             'hostelId'  => $hostelId,
             'debtors'   => $hostelId ? DuesDebtor::listFor($hostelId, trim($_GET['status'] ?? ''), trim($_GET['q'] ?? '')) : [],
