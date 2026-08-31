@@ -4,7 +4,7 @@
     <div class="flex flex-wrap gap-2">
         <a href="<?= url('/export/invoices') ?>" class="btn btn-ghost"><i class="fa-solid fa-file-csv"></i> Export</a>
         <?php if (\App\Core\Auth::hasRole('admin','hostel_admin')): ?>
-            <a href="<?= url('/fees') ?>" class="btn btn-ghost"><i class="fa-solid fa-tags"></i> Room Pricing</a>
+            <a href="<?= url('/fees') ?>" class="btn btn-ghost"><i class="fa-solid fa-hand-holding-dollar"></i> Fees & Hall Dues</a>
             <a href="<?= url('/charges/create') ?>" class="btn btn-ghost"><i class="fa-solid fa-file-invoice-dollar"></i> New Charge</a>
         <?php endif; ?>
         <a href="<?= url('/payments/create') ?>" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Record Payment</a>

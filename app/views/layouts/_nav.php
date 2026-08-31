@@ -24,6 +24,7 @@ $groups = [
     ],
     'Operations' => [
         ['Payments',     '/payments',     'fa-money-bill-wave', ['admin','hostel_admin','finance','student']],
+        ['Dues Debtors', '/debtors',      'fa-user-clock',      ['admin','hostel_admin']],
         ['Complaints',   '/complaints',   'fa-screwdriver-wrench', ['admin','hostel_admin','maintenance','student']],
         ['Visitors',     '/visitors',     'fa-user-check',      ['admin','hostel_admin','security']],
         ['Inventory',    '/inventory',    'fa-boxes-stacked',   ['admin','hostel_admin','maintenance']],

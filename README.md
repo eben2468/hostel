@@ -16,10 +16,12 @@ A modern, web-based hostel administration platform built with **plain PHP 8**, *
 | **Hostels** | CRUD with facilities, live occupancy cards |
 | **Blocks & Floors** | Nested structure management under each hostel |
 | **Rooms** | CRUD, auto bed creation, occupancy sync |
-| **Applications** | Student applications, approve / reject / waiting-list |
+| **Applications** | Student applications, approve / reject / waiting-list, **hall-dues Reference ID** submitted with the application and checked off by the hostel admin, cancel-with-note |
 | **Allocations** | Manual room allocation (transaction-safe), bed assignment, auto-invoice, check-in / check-out / cancel |
 | **Room Transfers** | Move a student between rooms — releases old bed, assigns new, marks history |
 | **Finance** | Invoices, payments (cash/Paystack/MoMo/bank), **live Paystack gateway** (cURL) with simulation fallback, student self-pay, printable + **PDF receipts** (FPDF) |
+| **Hall Dues** | Per-hostel bank/MoMo payment account, dues notice for fresh vs continuing students with admin notes, published to students on their Payments page and the application form |
+| **Dues Debtors** | Upload the hall's arrears list (.xlsx/.csv/.txt); students matched by student ID *or* phone are blocked from applying until an admin marks the debt settled |
 | **Email / SMS** | PHPMailer SMTP email + Arkesel/Hubtel SMS on key events; both log to file when unconfigured |
 | **Complaints** | Submission + maintenance status workflow |
 | **Visitors** | Registration, security approval, pass codes, check-in/out, blacklist |
@@ -269,6 +271,182 @@ database so nobody stays locked out:
 ```sql
 UPDATE settings SET value = '0' WHERE `key` = 'twofa_enabled';
 ```
+
+### Hall dues & the application Reference ID
+
+Each hostel collects its own hall dues off-platform (bank transfer or mobile
+money) and uses the reference the transfer returns as proof of payment.
+
+**Admins and hostel admins** set this up under **Payments → Invoices → Hall Dues
+Setup** (`/fees`). A super admin picks the hostel first; a hostel admin only ever
+sees their own. Three things live there:
+
+| Section | What it does |
+|---------|--------------|
+| **Room Pricing** | Existing per-room-type accommodation prices |
+| **Hall Dues Notice** | The amount **fresh** and **continuing** students each owe, with a free-text note explaining what it covers (line breaks are kept, so you can list the breakdown) |
+| **Dues Payment Account** | The bank and/or mobile-money account students pay into, step-by-step payment instructions, and a switch for whether a Reference ID is mandatory on applications |
+
+A live preview at the bottom of the page shows exactly what students will see.
+
+**Students** see that panel on their **Payments** page and again on the
+**room-application form**, with the card for their own category highlighted (read
+from their academic level, and overridable on the form). They pay, then type the
+**Reference ID** from their receipt or confirmation SMS into the application.
+When the hostel has published an account and left the switch on, the application
+will not submit without one.
+
+**Hostel admins** review the references on the **Applications** list. Each row
+shows the reference, the expected amount, a verification badge, and a red warning
+when the same reference appears on another application. Two buttons record the
+outcome of checking it against the account — *payment found* and *no payment
+traced* — and both notify the student. Approve / waiting-list / reject work as
+before, and a **Cancel** button opens a dialog that **requires a note**; that note
+is delivered to the student with the cancellation and is shown against the
+application in their own list. The applications CSV export carries the reference,
+expected amount, check state and review note so they can be reconciled against a
+bank statement in a spreadsheet.
+
+Hostel isolation applies throughout: a hostel admin can only read or write their
+own hostel's dues settings and can only review applications directed at it.
+
+On an existing database, run the migration once. Like the two-factor migration it
+carries no `USE` statement, so it applies to whichever database you point it at:
+
+```bash
+# local (XAMPP)
+mysql -u root -p chms_hostel < database/migration_hostel_dues.sql
+
+# live server — use your own database and user
+mysql -u YOUR_USER -p YOUR_DATABASE < database/migration_hostel_dues.sql
+```
+
+In **phpMyAdmin**: click your database in the left sidebar *first*, then
+**Import → choose the file → Go**.
+
+The migration is safe to re-run and ends with a check that prints `13` and `7`
+when it worked:
+
+```sql
+SELECT
+    (SELECT COUNT(*) FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'hostels'
+        AND COLUMN_NAME LIKE 'dues%')  AS hostel_dues_columns,
+    (SELECT COUNT(*) FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'applications'
+        AND COLUMN_NAME IN ('student_type','payment_reference','payment_amount',
+                            'payment_status','payment_verified_by',
+                            'payment_verified_at','review_note')) AS application_dues_columns;
+```
+
+Nothing is enforced until a hostel actually publishes an account, so existing
+hostels keep working exactly as before until their admin fills the page in.
+
+### Hall dues debtors (arrears from previous semesters)
+
+Students who never paid a past semester's dues are stopped from applying for a
+room until the debt is settled.
+
+**Admins and hall admins** manage the list under **Dues Debtors** (`/debtors`).
+Click **Upload List** and choose the hall's debtors file — **.xlsx, .csv, .txt or
+.tsv**, up to 5 MB. Each upload is stored as one *batch*, so importing the wrong
+file is undone by deleting that batch (its rows go with it).
+
+Columns may be in **any order**: every cell is classified by what it looks like,
+so a list typed differently next semester still imports.
+
+| Read as | Recognised by |
+|---|---|
+| Student ID | mixed letters and digits, e.g. `226TR02000104` |
+| Phone | 9–12 bare digits |
+| Name | the longest mostly-alphabetic cell |
+| Room | a short token such as `GF12`, `SF3` |
+| Amount | a decimal such as `150.00` |
+
+A heading like `"2ND SEMESTER, 2025/2026"` is picked up and applied to every row
+beneath it, so one file can carry several semesters and a student listed in two
+of them shows two debts. The ordinal is read in any of the usual phrasings —
+`1ST SEMESTER`, `FIRST SEMESTER`, `SEMESTER 1`, `SEM 2`, `SEMESTER II`. If a
+heading gives a year but no ordinal, the rows below it import with a blank
+semester and the importer tells you how many; they still block the student, who
+simply sees "a previous semester" instead of which one, and the semester can be
+set on any row by editing it.
+
+Title banners and column headers are ignored. Each row needs **at least a
+student ID or a phone number**; anything unreadable is reported back after the
+import rather than silently dropped.
+
+**Matching.** A student is matched by **student ID or phone number**, so one
+wrong field in the source list does not let anybody slip through:
+
+- Student IDs compare case-insensitively with punctuation stripped.
+- Phones compare on their **last 9 digits**. Ghanaian mobiles are 10 digits with
+  a leading zero, but a spreadsheet that stored the column as a number drops it —
+  `0548811774`, `548811774` and `+233548811774` all match each other.
+
+Matching is scoped to the student's own hall. The check runs the moment a student
+tries to apply, so a debtor who has not registered yet is blocked automatically
+whenever they do sign up.
+
+**Adding and editing by hand.** Not everything arrives as a file. **Add Debtor**
+opens a form for a single entry — name, student ID, phone, room, amount,
+academic year and semester — and the pencil icon on any row opens the same form
+to correct one. Hand-typed rows are collected in their own batch ("Added by
+hand") so they are just as traceable as an upload, and are never swept away when
+an uploaded list is deleted.
+
+At least one of **Student ID** or **Phone** is required, since that is what a
+student is matched on; giving both is safest because either will catch them.
+After saving, the confirmation says whether the row actually matches a
+registered student — a row matching nobody blocks nothing until that person
+signs up, and it is easy to mistype an ID and never notice. Opening an existing
+row for editing shows the same thing, naming and linking whoever it currently
+blocks. Corrections take effect at once: fixing a wrong phone number makes the
+row start matching immediately.
+
+The trash icon removes a single row, for a hand-entry made in error — deleting
+its whole batch would otherwise take everything else with it.
+
+**What the student sees.** A red panel on their Applications and Payments pages
+listing each unpaid semester, the room and the amount, with the total; the *New
+Application* button is disabled. Trying to reach the form anyway is refused with
+a message naming the semesters and the total owed.
+
+**Clearing a debt.** When the student pays, the admin clicks **Mark settled** on
+that row and they can apply straight away. *Reopen* undoes a clearing made in
+error. The list also shows which debtors already have an account on the system,
+so you can see at a glance who the block will actually catch.
+
+Staff are never blocked — a hall admin may be recording an application for
+someone who has just paid at the desk — but the confirmation tells them the
+student has arrears, so an unpaid debt is not approved by accident.
+
+#### .xlsx without the `zip` extension
+
+Reading .xlsx normally needs PHP's `zip` extension, which is off by default on
+much shared hosting. The reader uses it when present and otherwise unpacks the
+workbook itself using `zlib` (effectively always available), so uploads work
+without changing `php.ini`. Old binary `.xls` files are *not* supported — open
+the file in Excel and save it as **.xlsx** or **CSV**.
+
+#### Migration
+
+On an existing database, run the migration once. Like the others it carries no
+`USE` statement, so it applies to whichever database you point it at:
+
+```bash
+# local (XAMPP)
+mysql -u root -p chms_hostel < database/migration_dues_debtors.sql
+
+# live server — use your own database and user
+mysql -u YOUR_USER -p YOUR_DATABASE < database/migration_dues_debtors.sql
+```
+
+It creates `dues_debtor_batches` and `dues_debtors`, then aligns their collation
+with the existing `students` table — matching joins the two, and a server whose
+default collation differs from the one the original schema was built with would
+otherwise fail with `#1267 Illegal mix of collations`. Safe to re-run; it ends by
+printing both table counts and the two collations, which should agree.
 
 ### PDF receipts
 

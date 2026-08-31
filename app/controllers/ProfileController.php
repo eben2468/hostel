@@ -6,6 +6,7 @@ use App\Core\Csrf;
 use App\Core\Session;
 use App\Core\Auth;
 use App\Core\Database;
+use App\Models\Student;
 
 class ProfileController extends Controller
 {
@@ -24,6 +25,9 @@ class ProfileController extends Controller
             [$this->input('name'), $this->input('phone'), $this->input('email'), Auth::id()]
         );
         Session::set('user_name', $this->input('name'));
+        // A student changing their own address must also change where their
+        // notifications go — those are sent to the student record, not here.
+        Student::syncContactFromUser((int) Auth::id());
 
         // Optional avatar upload.
         if (!empty($_FILES['avatar']['name'])) {

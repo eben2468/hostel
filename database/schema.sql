@@ -139,6 +139,23 @@ CREATE TABLE IF NOT EXISTS hostels (
     paystack_public_key VARCHAR(255) NULL,
     paystack_secret_key VARCHAR(255) NULL,
     paystack_enabled TINYINT(1) NOT NULL DEFAULT 0, -- students may pay online when 1
+    -- Hall-dues payment account. Admins/hostel admins publish these details so
+    -- students can pay dues off-platform and submit the reference ID they get
+    -- back together with their room application.
+    dues_bank_name         VARCHAR(120)  NULL,
+    dues_account_name      VARCHAR(150)  NULL,
+    dues_account_number    VARCHAR(60)   NULL,
+    dues_branch            VARCHAR(120)  NULL,
+    dues_momo_network      VARCHAR(40)   NULL,
+    dues_momo_name         VARCHAR(150)  NULL,
+    dues_momo_number       VARCHAR(40)   NULL,
+    dues_instructions      TEXT          NULL,   -- free-text payment steps
+    -- Dues notice: what freshers vs continuing students owe, plus admin notes.
+    dues_fresher_amount    DECIMAL(12,2) NULL,
+    dues_fresher_note      TEXT          NULL,
+    dues_continuing_amount DECIMAL(12,2) NULL,
+    dues_continuing_note   TEXT          NULL,
+    dues_reference_required TINYINT(1) NOT NULL DEFAULT 1, -- reference ID mandatory on applications
     created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
@@ -203,12 +220,21 @@ CREATE TABLE IF NOT EXISTS applications (
     student_id      INT          NOT NULL,
     academic_year   VARCHAR(40)  NULL,
     semester        VARCHAR(40)  NULL,
+    student_type    ENUM('fresher','continuing') NULL, -- drives which dues amount applies
     preferred_hostel_id INT      NULL,
     preferred_room_type ENUM('single','double','triple','quad','deluxe','vip') NULL,
     preferred_room_id   INT      NULL,
     medical_conditions  VARCHAR(255) NULL,
     special_needs   VARCHAR(255) NULL,
     remarks         TEXT         NULL,
+    -- Proof of hall-dues payment: the reference the student gets back from the
+    -- bank / mobile-money transfer, checked by a hostel admin before approval.
+    payment_reference   VARCHAR(80)   NULL,
+    payment_amount      DECIMAL(12,2) NULL,
+    payment_status  ENUM('unverified','verified','not_found') NOT NULL DEFAULT 'unverified',
+    payment_verified_by INT      NULL,
+    payment_verified_at DATETIME NULL,
+    review_note     TEXT         NULL,   -- note shown to the student on cancel/reject
     priority        INT          NOT NULL DEFAULT 0,
     status          ENUM('pending','approved','rejected','cancelled','waiting','expired') NOT NULL DEFAULT 'pending',
     reviewed_by     INT          NULL,
@@ -217,7 +243,8 @@ CREATE TABLE IF NOT EXISTS applications (
     CONSTRAINT fk_app_student FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
     CONSTRAINT fk_app_hostel  FOREIGN KEY (preferred_hostel_id) REFERENCES hostels(id) ON DELETE SET NULL,
     CONSTRAINT fk_app_pref_room FOREIGN KEY (preferred_room_id) REFERENCES rooms(id) ON DELETE SET NULL,
-    INDEX idx_app_status (status)
+    INDEX idx_app_status (status),
+    INDEX idx_app_payment_ref (payment_reference)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS allocations (
@@ -434,5 +461,52 @@ INSERT IGNORE INTO settings (`key`, value) VALUES
     ('twofa_enabled',    '0'),   -- master switch
     ('twofa_roles',      ''),    -- CSV of roles that must complete 2FA, e.g. "admin,finance"
     ('twofa_recipients', '');    -- JSON map of role => override recipient email(s)
+
+-- ---------------------------------------------------------------------------
+-- Hall dues debtors: arrears carried over from previous semesters.
+-- An admin uploads the hall's list (txt/csv/xlsx); each upload is one batch so
+-- a wrong import can be removed in one click. Students matching a row by
+-- student ID or phone are blocked from applying for a room.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS dues_debtor_batches (
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    hostel_id     INT          NULL,
+    filename      VARCHAR(255) NOT NULL,       -- original upload name, for the audit trail
+    label         VARCHAR(150) NULL,           -- e.g. "2nd Semester 2025/2026 arrears"
+    row_count     INT          NOT NULL DEFAULT 0,
+    skipped_count INT          NOT NULL DEFAULT 0,
+    uploaded_by   INT          NULL,
+    created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_debtor_batch_hostel FOREIGN KEY (hostel_id) REFERENCES hostels(id) ON DELETE CASCADE,
+    INDEX idx_debtor_batch_hostel (hostel_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS dues_debtors (
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    batch_id      INT          NOT NULL,
+    hostel_id     INT          NULL,
+    full_name     VARCHAR(150) NULL,
+    student_no    VARCHAR(60)  NULL,           -- exactly as it appears in the file
+    -- Normalised copies are what matching compares. Student IDs are upper-cased
+    -- with punctuation stripped; phones keep their last 9 digits so "0548811774"
+    -- and the "548811774" a spreadsheet leaves behind still match each other.
+    student_no_norm VARCHAR(60) NULL,
+    phone         VARCHAR(40)  NULL,
+    phone_norm    VARCHAR(20)  NULL,
+    room_label    VARCHAR(40)  NULL,
+    amount        DECIMAL(12,2) NULL,
+    academic_year VARCHAR(40)  NULL,
+    semester      VARCHAR(40)  NULL,
+    status        ENUM('outstanding','cleared') NOT NULL DEFAULT 'outstanding',
+    cleared_by    INT          NULL,
+    cleared_at    DATETIME     NULL,
+    note          VARCHAR(255) NULL,
+    created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_debtor_batch FOREIGN KEY (batch_id) REFERENCES dues_debtor_batches(id) ON DELETE CASCADE,
+    INDEX idx_debtor_hostel (hostel_id),
+    INDEX idx_debtor_studentno (student_no_norm),
+    INDEX idx_debtor_phone (phone_norm),
+    INDEX idx_debtor_status (status)
+) ENGINE=InnoDB;
 
 SET FOREIGN_KEY_CHECKS = 1;

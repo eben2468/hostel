@@ -70,6 +70,7 @@ class ExportController extends Controller
         [$term, $termB] = $this->termFilter('a');
         $rows = Database::all(
             "SELECT s.full_name, s.student_id, h.name AS hostel, a.preferred_room_type, a.status,
+                    a.student_type, a.payment_reference, a.payment_amount, a.payment_status, a.review_note,
                     a.academic_year, a.semester, a.created_at
              FROM applications a JOIN students s ON s.id=a.student_id
              LEFT JOIN hostels h ON h.id=a.preferred_hostel_id
@@ -77,9 +78,14 @@ class ExportController extends Controller
             array_merge($bind, $termB)
         );
         Audit::log('export', 'applications', null, count($rows) . ' rows');
+        // The dues columns are here so an admin can reconcile the references
+        // against a bank statement in a spreadsheet.
         Csv::download('applications', $rows, [
             'full_name' => 'Student', 'student_id' => 'Student ID', 'hostel' => 'Preferred Hostel',
             'preferred_room_type' => 'Room Type', 'status' => 'Status',
+            'student_type' => 'Student Category', 'payment_reference' => 'Dues Reference ID',
+            'payment_amount' => 'Dues Expected', 'payment_status' => 'Dues Check',
+            'review_note' => 'Review Note',
             'academic_year' => 'Year', 'semester' => 'Semester', 'created_at' => 'Applied',
         ]);
     }

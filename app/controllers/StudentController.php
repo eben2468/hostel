@@ -103,8 +103,13 @@ class StudentController extends Controller
         $this->guardHostel($existing['hostel_id'] !== null ? (int) $existing['hostel_id'] : null);
         $this->students->update($id, $this->data($existing));
         $this->handlePhoto($id, $existing['photo'] ?? null);
+        // Keep the login account's address in step, or mail keeps going to the
+        // old one — notifications are sent to students.email, not users.email.
+        $synced = Student::syncContactToUser((int) $id);
         Audit::log('update', 'students', $id);
-        Session::flash('success', 'Student updated.');
+        Session::flash($synced ? 'success' : 'error', $synced
+            ? 'Student updated.'
+            : 'Student updated, but another account already uses that email — their sign-in address was left unchanged.');
         $this->redirect('/students/' . $id);
     }
 

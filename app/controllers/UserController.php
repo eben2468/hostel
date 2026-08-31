@@ -172,6 +172,9 @@ class UserController extends Controller
             $data['password'] = Auth::hash($password);
         }
         $this->users->update($id, $data);
+        // If this account belongs to a student, their notification address
+        // lives on the student record — move it with the account.
+        \App\Models\Student::syncContactFromUser((int) $id);
         Audit::log('update', 'users', $id);
         Session::flash('success', 'User updated.');
         $this->redirect('/users');

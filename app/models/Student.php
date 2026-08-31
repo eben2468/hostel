@@ -39,6 +39,80 @@ class Student extends Model
         return $this->findBy('user_id', $userId);
     }
 
+    /**
+     * Push a student record's contact details onto their linked login account.
+     *
+     * A student's address is held twice: `students.email` is where every
+     * notification is delivered, `users.email` is what they sign in and reset a
+     * password with. Editing one screen used to leave the other stale, and mail
+     * then went on being sent to an address nobody reads. Keeping them in step
+     * on every write is what stops that.
+     *
+     * @return bool false when another account already holds the address
+     *              (`users.email` is UNIQUE), so the caller can warn instead of
+     *              failing the whole save.
+     */
+    public static function syncContactToUser(int $studentId): bool
+    {
+        $s = Database::first("SELECT user_id, email, phone FROM students WHERE id = ?", [$studentId]);
+        if (!$s || empty($s['user_id'])) {
+            return true; // No login account linked — nothing to keep in step.
+        }
+        $email = trim((string) $s['email']);
+        if ($email !== '' && (int) Database::scalar(
+                "SELECT COUNT(*) FROM users WHERE email = ? AND id <> ?", [$email, $s['user_id']]) > 0) {
+            return false; // Taken by someone else; leave the account untouched.
+        }
+        return self::applyContact('users', 'id', (int) $s['user_id'], $email, (string) $s['phone']);
+    }
+
+    /** The reverse: mirror a login account's contact details onto its student record. */
+    public static function syncContactFromUser(int $userId): void
+    {
+        $u = Database::first("SELECT email, phone FROM users WHERE id = ?", [$userId]);
+        if ($u) {
+            self::applyContact('students', 'user_id', $userId, (string) $u['email'], (string) $u['phone']);
+        }
+    }
+
+    /**
+     * Write whichever of email/phone actually has a value. Blank fields are
+     * skipped rather than written, so a screen that does not collect one of
+     * them can never wipe the other record's copy.
+     */
+    private static function applyContact(string $table, string $key, int $id, string $email, string $phone): bool
+    {
+        $sets = [];
+        $params = [];
+        foreach (['email' => trim($email), 'phone' => trim($phone)] as $column => $value) {
+            if ($value !== '') {
+                $sets[] = "{$column} = ?";
+                $params[] = $value;
+            }
+        }
+        if (!$sets) {
+            return true;
+        }
+        $params[] = $id;
+        Database::run("UPDATE {$table} SET " . implode(', ', $sets) . " WHERE {$key} = ?", $params);
+        return true;
+    }
+
+    /**
+     * Best guess at whether a student is a fresher or a continuing student,
+     * read off their academic level ("100", "Level 100" and "1" all mean a
+     * fresher). Returns null when the level says nothing useful, in which case
+     * the student picks their own category on the application form.
+     */
+    public static function typeFor(?array $student): ?string
+    {
+        $level = trim((string) ($student['level'] ?? ''));
+        if ($level === '' || !preg_match('/\d+/', $level, $m)) {
+            return null;
+        }
+        return (int) $m[0] <= 100 ? 'fresher' : 'continuing';
+    }
+
     /** Paginated search. Returns a Paginator::make result array. */
     public function searchPaginated(string $term, string $status, int $page, int $perPage = 15): array
     {

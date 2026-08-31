@@ -9,13 +9,25 @@ class Application extends Model
 {
     protected string $table = 'applications';
     protected array $fillable = [
-        'student_id','academic_year','semester','preferred_hostel_id','preferred_room_type','preferred_room_id',
+        'student_id','academic_year','semester','student_type','preferred_hostel_id','preferred_room_type','preferred_room_id',
         'medical_conditions','special_needs','remarks','priority','status','reviewed_by','reviewed_at',
+        'payment_reference','payment_amount','payment_status','payment_verified_by','payment_verified_at','review_note',
     ];
+
+    /**
+     * Counts other applications quoting the same dues reference. A reference
+     * should only ever appear once, so anything above zero is worth a second
+     * look before the application is approved.
+     */
+    private const REF_DUPLICATES = "(SELECT COUNT(*) FROM applications d
+                 WHERE d.payment_reference = a.payment_reference
+                   AND d.payment_reference IS NOT NULL AND d.payment_reference <> ''
+                   AND d.id <> a.id) AS ref_duplicates";
 
     public function allWithStudent(string $status = ''): array
     {
-        $sql = "SELECT a.*, s.full_name, s.student_id AS student_no, h.name AS hostel_name, pr.room_number AS preferred_room_number
+        $sql = "SELECT a.*, s.full_name, s.student_id AS student_no, h.name AS hostel_name, pr.room_number AS preferred_room_number,
+                       " . self::REF_DUPLICATES . "
                 FROM applications a
                 JOIN students s ON s.id = a.student_id
                 LEFT JOIN hostels h ON h.id = a.preferred_hostel_id
@@ -47,7 +59,8 @@ class Application extends Model
         array_push($params, ...$bind);
         return \App\Core\Paginator::make(
             "SELECT COUNT(*) FROM applications a{$where}",
-            "SELECT a.*, s.full_name, s.student_id AS student_no, h.name AS hostel_name, pr.room_number AS preferred_room_number
+            "SELECT a.*, s.full_name, s.student_id AS student_no, h.name AS hostel_name, pr.room_number AS preferred_room_number,
+                    " . self::REF_DUPLICATES . "
              FROM applications a
              JOIN students s ON s.id = a.student_id
              LEFT JOIN hostels h ON h.id = a.preferred_hostel_id

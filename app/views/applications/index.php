@@ -1,6 +1,18 @@
-<?php /** @var array $applications @var bool $isStudent @var string $status @var ?bool $applicationsOpen */
+<?php /** @var array $applications @var bool $isStudent @var string $status @var ?bool $applicationsOpen @var array $dues */
 use App\Core\Auth;
 $applicationsOpen = $applicationsOpen ?? null;
+$dues = $dues ?? [];
+$arrears = $arrears ?? []; // only populated for a student; staff never see the panel
+$duesCompact = true; // The list is a reminder; the full how-to lives on the form.
+
+/** Label, pill classes and icon for a dues-reference verification state. */
+$payBadge = function (?string $state): array {
+    return [
+        'verified'  => ['Verified',  'bg-green-100 text-green-700',  'fa-circle-check'],
+        'not_found' => ['Not found', 'bg-red-100 text-red-700',      'fa-circle-xmark'],
+    ][$state] ?? ['Awaiting check', 'bg-yellow-100 text-yellow-700', 'fa-hourglass-half'];
+};
+$colspan = $isStudent ? 7 : 8;
 ?>
 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
     <div class="flex items-center gap-3">
@@ -29,11 +41,19 @@ $applicationsOpen = $applicationsOpen ?? null;
             </form>
         <?php endif; ?>
     </div>
-    <?php if ($isStudent && $applicationsOpen): ?>
-        <a href="<?= url('/applications/create') ?>" class="btn btn-primary"><i class="fa-solid fa-plus"></i> New Application</a>
-    <?php elseif (Auth::hasRole('admin','hostel_admin')): ?>
-        <a href="<?= url('/applications/create') ?>" class="btn btn-primary"><i class="fa-solid fa-plus"></i> New Application</a>
-    <?php endif; ?>
+    <div class="flex flex-wrap gap-2">
+        <?php if (Auth::hasRole('admin','hostel_admin')): ?>
+            <a href="<?= url('/fees') ?>" class="btn btn-ghost"><i class="fa-solid fa-hand-holding-dollar"></i> Hall Dues Setup</a>
+        <?php endif; ?>
+        <?php if ($isStudent && $arrears): ?>
+            <!-- Offering the button would only bounce them back here. -->
+            <span class="btn bg-gray-100 text-gray-400 cursor-not-allowed" title="Settle your outstanding hall dues first">
+                <i class="fa-solid fa-lock"></i> New Application
+            </span>
+        <?php elseif (($isStudent && $applicationsOpen) || Auth::hasRole('admin','hostel_admin')): ?>
+            <a href="<?= url('/applications/create') ?>" class="btn btn-primary"><i class="fa-solid fa-plus"></i> New Application</a>
+        <?php endif; ?>
+    </div>
 </div>
 
 <?php if ($isStudent && !$applicationsOpen): ?>
@@ -46,6 +66,11 @@ $applicationsOpen = $applicationsOpen ?? null;
     </div>
 <?php endif; ?>
 
+<?php if ($isStudent): ?>
+    <?php require VIEW_PATH . '/partials/_arrears_panel.php'; ?>
+    <?php require VIEW_PATH . '/partials/_dues_panel.php'; ?>
+<?php endif; ?>
+
 <div class="ui-card overflow-hidden" data-reveal="0">
     <div class="overflow-x-auto">
         <table class="w-full text-sm ui-table">
@@ -54,7 +79,7 @@ $applicationsOpen = $applicationsOpen ?? null;
                     <?php if (!$isStudent): ?><th class="px-4 py-3 font-semibold">Student</th><?php endif; ?>
                     <th class="px-4 py-3 font-semibold">Preferred Hostel</th>
                     <th class="px-4 py-3 font-semibold">Preferred Room</th>
-                    <th class="px-4 py-3 font-semibold">Room Type</th>
+                    <th class="px-4 py-3 font-semibold">Dues Payment</th>
                     <th class="px-4 py-3 font-semibold">Year/Sem</th>
                     <th class="px-4 py-3 font-semibold">Submitted</th>
                     <th class="px-4 py-3 font-semibold">Status</th>
@@ -62,29 +87,82 @@ $applicationsOpen = $applicationsOpen ?? null;
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
-                <?php if (!$applications): ?><tr><td colspan="8" class="px-4 py-14 text-center">
+                <?php if (!$applications): ?><tr><td colspan="<?= $colspan ?>" class="px-4 py-14 text-center">
                     <div class="inline-flex flex-col items-center text-gray-400">
                         <span class="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mb-3"><i class="fa-solid fa-file-lines text-xl"></i></span>
                         <p class="text-sm font-medium text-gray-500">No applications</p>
                     </div>
                 </td></tr><?php endif; ?>
                 <?php foreach ($applications as $a): ?>
-                    <tr>
+                    <?php
+                    [$payLabel, $payClass, $payIcon] = $payBadge($a['payment_status'] ?? null);
+                    $reference  = trim((string) ($a['payment_reference'] ?? ''));
+                    $duplicates = (int) ($a['ref_duplicates'] ?? 0);
+                    $note       = trim((string) ($a['review_note'] ?? ''));
+                    $isOpenApp  = in_array($a['status'], ['pending', 'waiting'], true);
+                    ?>
+                    <tr class="align-top">
                         <?php if (!$isStudent): ?>
                             <td class="px-4 py-3">
                                 <p class="font-medium text-gray-700"><?= e($a['full_name']) ?></p>
                                 <p class="text-xs text-gray-400"><?= e($a['student_no']) ?></p>
+                                <?php if (!empty($a['student_type'])): ?>
+                                    <p class="text-[11px] text-gray-400 mt-0.5"><i class="fa-solid <?= $a['student_type'] === 'fresher' ? 'fa-seedling' : 'fa-user-clock' ?> mr-0.5"></i><?= $a['student_type'] === 'fresher' ? 'Fresh' : 'Continuing' ?></p>
+                                <?php endif; ?>
                             </td>
                         <?php endif; ?>
                         <td class="px-4 py-3 text-gray-500"><?= e($a['hostel_name'] ?? 'Any') ?></td>
-                        <td class="px-4 py-3 text-gray-500"><?= !empty($a['preferred_room_number']) ? 'Room '.e($a['preferred_room_number']) : '—' ?></td>
-                        <td class="px-4 py-3 text-gray-500"><?= ucfirst($a['preferred_room_type'] ?? '—') ?></td>
+                        <td class="px-4 py-3 text-gray-500">
+                            <?= !empty($a['preferred_room_number']) ? 'Room '.e($a['preferred_room_number']) : '—' ?>
+                            <span class="block text-xs text-gray-400"><?= $a['preferred_room_type'] ? ucfirst($a['preferred_room_type']) : '' ?></span>
+                        </td>
+
+                        <!-- Dues reference + verification state -->
+                        <td class="px-4 py-3">
+                            <?php if ($reference !== ''): ?>
+                                <p class="font-medium text-gray-700 tnum break-all"><?= e($reference) ?></p>
+                            <?php else: ?>
+                                <p class="text-gray-300">No reference</p>
+                            <?php endif; ?>
+                            <span class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium <?= $payClass ?>">
+                                <i class="fa-solid <?= $payIcon ?>"></i><?= $payLabel ?>
+                            </span>
+                            <?php if ($a['payment_amount'] !== null && $a['payment_amount'] !== ''): ?>
+                                <span class="block text-[11px] text-gray-400 mt-0.5">Expected <?= money($a['payment_amount']) ?></span>
+                            <?php endif; ?>
+                            <?php if (!$isStudent && $duplicates > 0): ?>
+                                <span class="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-red-600" title="This reference appears on another application">
+                                    <i class="fa-solid fa-clone"></i>Used on <?= $duplicates ?> other application<?= $duplicates > 1 ? 's' : '' ?>
+                                </span>
+                            <?php endif; ?>
+                        </td>
+
                         <td class="px-4 py-3 text-gray-500"><?= e($a['academic_year'] ?? '—') ?> <?= e($a['semester'] ?? '') ?></td>
                         <td class="px-4 py-3 text-gray-500"><?= datef($a['created_at']) ?></td>
-                        <td class="px-4 py-3"><?= status_badge($a['status']) ?></td>
+                        <td class="px-4 py-3">
+                            <?= status_badge($a['status']) ?>
+                            <?php if ($note !== ''): ?>
+                                <p class="mt-1.5 max-w-[15rem] rounded-lg bg-gray-50 border border-gray-100 p-2 text-[11px] leading-relaxed text-gray-600 whitespace-pre-line">
+                                    <span class="font-semibold text-gray-500">Note:</span> <?= e($note) ?>
+                                </p>
+                            <?php endif; ?>
+                        </td>
+
                         <?php if (!$isStudent): ?>
                             <td class="px-4 py-3 text-right whitespace-nowrap">
-                                <?php if ($a['status'] === 'pending' || $a['status'] === 'waiting'): ?>
+                                <?php if ($isOpenApp): ?>
+                                    <!-- Dues check: confirm the reference, or flag it as untraceable -->
+                                    <div class="inline-flex items-center gap-0.5 mr-1 pr-1.5 border-r border-gray-200">
+                                        <form method="post" action="<?= url('/applications/'.$a['id'].'/verify-payment') ?>" class="inline">
+                                            <?= csrf_field() ?><input type="hidden" name="payment_status" value="verified">
+                                            <button class="inline-flex w-8 h-8 items-center justify-center rounded-lg text-gray-400 hover:bg-green-50 hover:text-green-600 transition" title="Payment found — mark reference verified"><i class="fa-solid fa-circle-check"></i></button>
+                                        </form>
+                                        <form method="post" action="<?= url('/applications/'.$a['id'].'/verify-payment') ?>" class="inline">
+                                            <?= csrf_field() ?><input type="hidden" name="payment_status" value="not_found">
+                                            <button class="inline-flex w-8 h-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 transition" title="No payment traced for this reference"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+                                        </form>
+                                    </div>
+
                                     <form method="post" action="<?= url('/applications/'.$a['id'].'/approve') ?>" class="inline">
                                         <?= csrf_field() ?><button class="inline-flex w-8 h-8 items-center justify-center rounded-lg text-gray-400 hover:bg-green-50 hover:text-green-600 transition" title="Approve"><i class="fa-solid fa-check"></i></button>
                                     </form>
@@ -94,6 +172,38 @@ $applicationsOpen = $applicationsOpen ?? null;
                                     <form method="post" action="<?= url('/applications/'.$a['id'].'/reject') ?>" class="inline">
                                         <?= csrf_field() ?><button class="inline-flex w-8 h-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 transition" title="Reject"><i class="fa-solid fa-xmark"></i></button>
                                     </form>
+
+                                    <!-- Cancel with a note — the unpaid-dues route -->
+                                    <span x-data="{ open: false }" class="inline">
+                                        <button type="button" @click="open = true"
+                                                class="inline-flex w-8 h-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 transition"
+                                                title="Cancel with a note to the student"><i class="fa-solid fa-ban"></i></button>
+
+                                        <div x-cloak x-show="open" @keydown.escape.window="open = false"
+                                             class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50" @click.self="open = false">
+                                            <form method="post" action="<?= url('/applications/'.$a['id'].'/cancel') ?>"
+                                                  class="w-full max-w-lg rounded-2xl bg-white p-6 text-left shadow-xl">
+                                                <?= csrf_field() ?>
+                                                <h3 class="font-display font-bold text-gray-800 flex items-center gap-2">
+                                                    <span class="inline-flex w-9 h-9 rounded-xl bg-red-50 text-red-600 items-center justify-center"><i class="fa-solid fa-ban text-sm"></i></span>
+                                                    Cancel application
+                                                </h3>
+                                                <p class="mt-2 text-sm text-gray-500">
+                                                    Cancelling <span class="font-medium text-gray-700"><?= e($a['full_name']) ?></span>'s application for
+                                                    <?= $reference !== '' ? 'reference <span class="font-medium text-gray-700 tnum">' . e($reference) . '</span>' : 'an application with <span class="font-medium text-gray-700">no reference</span>' ?>.
+                                                    Your note is sent to the student, so say exactly what they need to do.
+                                                </p>
+                                                <label class="mt-4 block text-sm font-medium text-gray-600 mb-1">Note to the student *</label>
+                                                <textarea name="review_note" rows="4" required class="ui-input text-sm"
+                                                          placeholder="We could not trace a payment for this reference. Please bring your receipt to the hostel office, or re-apply with the correct Reference ID."></textarea>
+                                                <div class="mt-5 flex justify-end gap-3">
+                                                    <button type="button" @click="open = false" class="px-4 py-2 text-sm text-gray-600">Close</button>
+                                                    <button class="btn bg-red-600 hover:bg-red-700 text-white"><i class="fa-solid fa-ban"></i>Cancel application</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </span>
+
                                     <?php if ($a['status'] === 'pending'): ?>
                                         <a href="<?= url('/allocations/create?student='.$a['student_id']) ?>" class="inline-flex w-8 h-8 items-center justify-center rounded-lg text-gray-400 hover:bg-primary-50 hover:text-primary-600 transition" title="Allocate"><i class="fa-solid fa-bed"></i></a>
                                     <?php endif; ?>

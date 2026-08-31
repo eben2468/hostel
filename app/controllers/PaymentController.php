@@ -39,6 +39,9 @@ class PaymentController extends Controller
                 'pageTitle' => 'My Payments', 'payments' => $rows, 'invoices' => $invoices,
                 'paystackEnabled' => $this->hostelPaystackEnabled($hostelId),
                 'feeSchedule'     => $hostelId ? (new Fee())->scheduleFor($hostelId) : [],
+                'dues'            => (new Hostel())->dues($hostelId),
+                'arrears'         => \App\Models\DuesDebtor::outstandingFor($student),
+                'duesStudentType' => Student::typeFor($student),
             ]);
             return;
         }
@@ -61,8 +64,10 @@ class PaymentController extends Controller
     }
 
     /**
-     * Manage a hostel's room-type prices (single/double/triple/quad). Hostel
-     * admins set their own hostel's; the super admin picks a hostel first.
+     * Manage everything a hostel charges for: room-type prices, the account
+     * students pay hall dues into, and the dues notice for freshers/continuing
+     * students. Hostel admins manage their own hostel's; the super admin picks
+     * a hostel first.
      */
     public function feeSchedule(): void
     {
@@ -73,12 +78,73 @@ class PaymentController extends Controller
             $this->guardHostel($hostelId);
         }
         $this->view('payments/fees', [
-            'pageTitle' => 'Room Pricing',
+            'pageTitle' => 'Fees & Hall Dues',
             'hostels'   => $hostels,
             'hostelId'  => $hostelId,
             'schedule'  => $hostelId ? (new Fee())->scheduleFor($hostelId) : [],
             'roomTypes' => Fee::ROOM_TYPES,
+            'dues'      => $hostelId ? (new Hostel())->dues($hostelId) : [],
         ]);
+    }
+
+    /**
+     * Save the bank / mobile-money account students pay hall dues into, plus the
+     * step-by-step instructions shown alongside it.
+     */
+    public function saveDuesAccount(): void
+    {
+        $hostelId = $this->duesHostelId();
+        $data = [];
+        foreach (Hostel::DUES_ACCOUNT_FIELDS as $field) {
+            $data[$field] = $this->input($field) ?: null;
+        }
+        // Absent checkbox means off; only meaningful once an account exists.
+        $data['dues_reference_required'] = isset($_POST['dues_reference_required']) ? 1 : 0;
+        (new Hostel())->update($hostelId, $data);
+        Audit::log('update', 'hostels', $hostelId, 'dues account');
+        Session::flash('success', 'Payment account saved. Students can now see where to pay their hall dues.');
+        $this->redirectToDues($hostelId);
+    }
+
+    /**
+     * Save the dues notice: what fresh and continuing students owe this term,
+     * plus the note explaining each amount.
+     */
+    public function saveDuesNotice(): void
+    {
+        $hostelId = $this->duesHostelId();
+        $data = [];
+        foreach (Hostel::DUES_NOTICE_FIELDS as $field) {
+            $raw = (string) $this->input($field, '');
+            // Amount fields are numeric; a blank clears the published figure.
+            $data[$field] = $raw === ''
+                ? null
+                : (str_ends_with($field, '_amount') ? (float) $raw : $raw);
+        }
+        (new Hostel())->update($hostelId, $data);
+        Audit::log('update', 'hostels', $hostelId, 'dues notice');
+        Session::flash('success', 'Dues notice saved. Students will see it when they apply for a room.');
+        $this->redirectToDues($hostelId);
+    }
+
+    /** Resolve and authorise the hostel a dues form was submitted for. */
+    private function duesHostelId(): int
+    {
+        $this->requireAuth('admin', 'hostel_admin');
+        Csrf::check();
+        $hostelId = Scope::isGlobal() ? (int) $this->input('hostel_id') : (int) Scope::hostelId();
+        if (!$hostelId) {
+            Session::flash('error', 'Please choose a hostel.');
+            $this->redirect('/fees');
+        }
+        $this->guardHostel($hostelId);
+        return $hostelId;
+    }
+
+    /** Back to the fees page, keeping the super admin's hostel selection. */
+    private function redirectToDues(int $hostelId): void
+    {
+        $this->redirect('/fees' . (Scope::isGlobal() ? '?hostel_id=' . $hostelId : ''));
     }
 
     /** Save a hostel's room-type prices. */

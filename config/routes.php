@@ -28,6 +28,7 @@ use App\Controllers\NotificationController;
 use App\Controllers\AcademicController;
 use App\Controllers\UserController;
 use App\Controllers\PasswordResetController;
+use App\Controllers\DebtorController;
 
 // --- Public / Auth ----------------------------------------------------------
 $router->get('/',                 [AuthController::class, 'showLogin']);
@@ -95,6 +96,8 @@ $router->post('/applications',           [ApplicationController::class, 'store']
 $router->post('/applications/{id}/approve', [ApplicationController::class, 'approve']);
 $router->post('/applications/{id}/reject',  [ApplicationController::class, 'reject']);
 $router->post('/applications/{id}/waiting', [ApplicationController::class, 'waiting']);
+$router->post('/applications/{id}/cancel',  [ApplicationController::class, 'cancel']);
+$router->post('/applications/{id}/verify-payment', [ApplicationController::class, 'verifyPayment']);
 
 // --- Allocations ------------------------------------------------------------
 $router->get('/allocations',            [AllocationController::class, 'index']);
@@ -122,6 +125,23 @@ $router->get('/charges/create',      [PaymentController::class, 'chargeForm']);
 $router->post('/charges',            [PaymentController::class, 'storeCharge']);
 $router->get('/fees',                [PaymentController::class, 'feeSchedule']);
 $router->post('/fees',               [PaymentController::class, 'saveFeeSchedule']);
+$router->post('/fees/dues-account',  [PaymentController::class, 'saveDuesAccount']);
+$router->post('/fees/dues-notice',   [PaymentController::class, 'saveDuesNotice']);
+
+// --- Hall dues debtors (arrears carried over from previous semesters) --------
+// The literal paths are registered before the {id} ones: the router takes the
+// first pattern that matches, so "/debtors/upload" must not be read as an id.
+$router->get('/debtors',                      [DebtorController::class, 'index']);
+$router->get('/debtors/upload',               [DebtorController::class, 'uploadForm']);
+$router->post('/debtors/upload',              [DebtorController::class, 'upload']);
+$router->get('/debtors/create',               [DebtorController::class, 'create']);
+$router->post('/debtors',                     [DebtorController::class, 'store']);
+$router->post('/debtors/batches/{id}/delete', [DebtorController::class, 'deleteBatch']);
+$router->get('/debtors/{id}/edit',            [DebtorController::class, 'edit']);
+$router->post('/debtors/{id}/clear',          [DebtorController::class, 'clear']);
+$router->post('/debtors/{id}/restore',        [DebtorController::class, 'restore']);
+$router->post('/debtors/{id}/delete',         [DebtorController::class, 'destroy']);
+$router->post('/debtors/{id}',                [DebtorController::class, 'update']);
 
 // --- Complaints -------------------------------------------------------------
 $router->get('/complaints',            [ComplaintController::class, 'index']);

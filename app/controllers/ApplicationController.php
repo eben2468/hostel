@@ -10,6 +10,8 @@ use App\Core\Database;
 use App\Models\Application;
 use App\Models\Student;
 use App\Models\Room;
+use App\Models\Hostel;
+use App\Models\DuesDebtor;
 use App\Services\Notify;
 
 class ApplicationController extends Controller
@@ -41,6 +43,9 @@ class ApplicationController extends Controller
             $this->view('applications/index', [
                 'pageTitle' => 'My Applications', 'applications' => $applications,
                 'isStudent' => true, 'status' => '', 'applicationsOpen' => $applicationsOpen,
+                'dues' => (new Hostel())->dues($student['hostel_id'] ?? null),
+                // Arrears from past semesters bar them from applying at all.
+                'arrears' => DuesDebtor::outstandingFor($student),
             ]);
             return;
         }
@@ -68,6 +73,8 @@ class ApplicationController extends Controller
         $this->requireAuth('student', 'admin', 'hostel_admin');
         $students = [];
         $preferredRooms = [];
+        $dues = [];
+        $studentType = null;
         if (Auth::hasRole('student')) {
             // A student's hostel is fixed at registration, so we only offer the
             // available rooms within their own hostel (no hostel choice here).
@@ -76,18 +83,32 @@ class ApplicationController extends Controller
                 Session::flash('error', 'Applications are currently closed for your hostel.');
                 $this->redirect('/applications');
             }
+            // Arrears bar the form outright; the applications list carries the
+            // panel explaining what is owed and how to clear it.
+            if ($arrears = DuesDebtor::outstandingFor($me)) {
+                Session::flash('error', $this->arrearsMessage($arrears));
+                $this->redirect('/applications');
+            }
             $preferredRooms = (new Room())->availableForHostel((int) $me['hostel_id']);
+            // The dues notice + account the student must pay into before applying.
+            $dues = (new Hostel())->dues((int) $me['hostel_id']);
+            $studentType = Student::typeFor($me);
         } else {
             // Staff pick a student; hostel admins only see their own students/rooms.
             $students = \App\Core\Scope::isGlobal()
                 ? (new Student())->all('full_name')
                 : (new Student())->search('', '');
             $preferredRooms = (new Room())->available(); // Scope-filtered to their hostel(s)
+            // A hostel-bound admin sees their own hostel's dues details; the
+            // super admin has no single hostel, so the panel is skipped.
+            $dues = (new Hostel())->dues(\App\Core\Scope::hostelId());
         }
         $this->view('applications/form', [
             'pageTitle'      => 'New Application',
             'students'       => $students,
             'preferredRooms' => $preferredRooms,
+            'dues'           => $dues,
+            'studentType'    => $studentType,
         ]);
     }
 
@@ -106,6 +127,12 @@ class ApplicationController extends Controller
             // Enforce the hostel's applications-open toggle for students.
             if (!$this->studentCanApply($student)) {
                 Session::flash('error', 'Applications are currently closed for your hostel.');
+                $this->redirect('/applications');
+            }
+            // Re-checked on submit, not just when the form was opened: the debt
+            // may have been added while the student had the page sitting open.
+            if ($arrears = DuesDebtor::outstandingFor($student)) {
+                Session::flash('error', $this->arrearsMessage($arrears));
                 $this->redirect('/applications');
             }
             $studentId = (int) $student['id'];
@@ -137,23 +164,81 @@ class ApplicationController extends Controller
             ? Database::first("SELECT academic_year, semester FROM hostels WHERE id=?", [$preferredHostelId])
             : null;
 
+        // Hall dues: the student pays into the hostel's published account and
+        // submits the reference their bank/MoMo transfer returned. We store the
+        // amount owed at submission time too, so a reviewer can see what the
+        // reference is meant to cover even if the notice changes later.
+        $dues        = (new Hostel())->dues($preferredHostelId);
+        $studentType = $this->input('student_type');
+        if (!array_key_exists((string) $studentType, Hostel::STUDENT_TYPES)) {
+            $studentType = Student::typeFor($student);
+        }
+        $reference = $this->input('payment_reference') ?: null;
+
+        // Students must supply the reference when their hostel asks for one.
+        // Staff recording an application on someone's behalf may leave it out
+        // and fill it in once the student produces their receipt.
+        if ($reference === null && Auth::hasRole('student') && Hostel::duesReferenceRequired($dues)) {
+            Session::set('_old', $_POST);
+            Session::flash('error', 'Please enter the Reference ID from your hall dues payment.');
+            $this->redirect('/applications/create');
+        }
+
         $id = $this->apps->create([
             'student_id'          => $studentId,
             'academic_year'       => $settings['academic_year'] ?? null,
             'semester'            => $settings['semester'] ?? null,
+            'student_type'        => $studentType,
             'preferred_hostel_id' => $preferredHostelId,
             'preferred_room_type' => $this->input('preferred_room_type') ?: null,
             'preferred_room_id'   => $roomId,
             'medical_conditions'  => $this->input('medical_conditions'),
             'special_needs'       => $this->input('special_needs'),
             'remarks'             => $this->input('remarks'),
+            'payment_reference'   => $reference,
+            'payment_amount'      => Hostel::duesAmountFor($dues, $studentType),
+            'payment_status'      => 'unverified',
             'status'              => 'pending',
         ]);
         Audit::log('create', 'applications', $id);
         Notify::toRole(['admin', 'hostel_admin'], 'New hostel application',
-            'A student submitted a hostel application.', '/applications', 'fa-file-lines');
+            $reference
+                ? 'A student applied and submitted dues reference ' . $reference . ' for checking.'
+                : 'A student submitted a hostel application.',
+            '/applications', 'fa-file-lines');
+        // Drop any repopulated form data so a later application never starts
+        // out pre-filled with a reference that has already been submitted.
+        Session::forget('_old');
         Session::flash('success', 'Application submitted successfully.');
+        // Staff are not blocked by arrears — they may be recording an
+        // application for someone who has just paid at the desk — but they are
+        // told, so an unpaid debt is never approved by accident.
+        if (!Auth::hasRole('student') && ($arrears = DuesDebtor::outstandingFor($student))) {
+            Session::flash('warning', 'Note: ' . $this->arrearsMessage($arrears, false));
+        }
         $this->redirect('/applications');
+    }
+
+    /**
+     * Spell out what is owed and for which semesters, so the student is not
+     * left guessing why they were turned away.
+     *
+     * @param bool $forStudent false phrases it for staff about the applicant
+     */
+    private function arrearsMessage(array $arrears, bool $forStudent = true): string
+    {
+        $terms = [];
+        foreach ($arrears as $d) {
+            $terms[] = DuesDebtor::termLabel($d);
+        }
+        $terms = array_slice(array_unique($terms), 0, 3);
+        $total = DuesDebtor::totalOwed($arrears);
+        $amount = $total > 0 ? ' of ' . money($total) : '';
+
+        return $forStudent
+            ? 'You have unpaid hall dues' . $amount . ' from ' . implode(' and ', $terms)
+                . '. Please settle at the hostel office before applying for a room.'
+            : 'this student has unpaid hall dues' . $amount . ' from ' . implode(' and ', $terms) . '.';
     }
 
     /** A student may apply only if bound to a hostel that is accepting applications. */
@@ -190,7 +275,8 @@ class ApplicationController extends Controller
 
     public function reject($id): void
     {
-        $this->setStatus($id, 'rejected', 'Application rejected.');
+        $note = trim((string) $this->input('review_note'));
+        $this->setStatus($id, 'rejected', 'Application rejected.', $note !== '' ? $note : null);
     }
 
     public function waiting($id): void
@@ -198,7 +284,67 @@ class ApplicationController extends Controller
         $this->setStatus($id, 'waiting', 'Application moved to waiting list.');
     }
 
-    private function setStatus($id, string $status, string $message): void
+    /**
+     * Cancel an application — what a hostel admin does when the dues reference
+     * does not check out. The note is mandatory: it is the only thing that
+     * tells the student what went wrong, and it rides along with the
+     * notification they receive.
+     */
+    public function cancel($id): void
+    {
+        $note = trim((string) $this->input('review_note'));
+        if ($note === '') {
+            Session::flash('error', 'Please write a note telling the student why the application was cancelled.');
+            $this->redirect('/applications');
+        }
+        $this->setStatus($id, 'cancelled', 'Application cancelled — the student has been notified.', $note);
+    }
+
+    /**
+     * Record the outcome of checking a dues reference against the hostel's
+     * account. Marking one "not found" deliberately leaves the application's
+     * own status alone, so the admin can still let the student correct the
+     * reference before cancelling.
+     */
+    public function verifyPayment($id): void
+    {
+        $this->requireAuth('admin', 'hostel_admin');
+        Csrf::check();
+        $app = $this->apps->find($id);
+        if (!$app) {
+            $this->redirect('/applications');
+        }
+        $this->guardHostel($app['preferred_hostel_id'] !== null ? (int) $app['preferred_hostel_id'] : null);
+
+        $state = (string) $this->input('payment_status');
+        if (!in_array($state, ['unverified', 'verified', 'not_found'], true)) {
+            $state = 'verified';
+        }
+        Database::run(
+            "UPDATE applications SET payment_status=?, payment_verified_by=?, payment_verified_at=NOW() WHERE id=?",
+            [$state, Auth::id(), $id]
+        );
+        Audit::log('update', 'applications', $id, 'payment_status=' . $state);
+
+        $reference = $app['payment_reference'] ?: 'not provided';
+        if ($state === 'verified') {
+            Notify::student((int) $app['student_id'], 'Hall dues payment confirmed',
+                'We traced your payment (reference ' . $reference . '). Your application is now awaiting a room.',
+                '/applications', 'fa-circle-check');
+            Session::flash('success', 'Payment confirmed for this application.');
+        } elseif ($state === 'not_found') {
+            Notify::student((int) $app['student_id'], 'Hall dues payment not found',
+                'We could not trace a payment for reference ' . $reference
+                . '. Please visit the hostel office with your receipt.',
+                '/applications', 'fa-triangle-exclamation');
+            Session::flash('success', 'Marked as not found — the student has been asked to follow up.');
+        } else {
+            Session::flash('success', 'Payment check reset to unverified.');
+        }
+        $this->redirect('/applications');
+    }
+
+    private function setStatus($id, string $status, string $message, ?string $note = null): void
     {
         $this->requireAuth('admin', 'hostel_admin');
         Csrf::check();
@@ -208,14 +354,18 @@ class ApplicationController extends Controller
         }
         // A hostel admin may only review applications directed at their hostel.
         $this->guardHostel($app['preferred_hostel_id'] !== null ? (int) $app['preferred_hostel_id'] : null);
+        // The note is always written, so a fresh decision without one clears the
+        // previous decision's note rather than leaving stale text on the record.
         Database::run(
-            "UPDATE applications SET status=?, reviewed_by=?, reviewed_at=NOW() WHERE id=?",
-            [$status, Auth::id(), $id]
+            "UPDATE applications SET status=?, review_note=?, reviewed_by=?, reviewed_at=NOW() WHERE id=?",
+            [$status, $note, Auth::id(), $id]
         );
         Audit::log('update', 'applications', $id, 'status=' . $status);
         if ($app) {
             Notify::student((int) $app['student_id'], 'Application ' . ucfirst($status),
-                'Your hostel application has been ' . $status . '.', '/applications', 'fa-file-lines');
+                'Your hostel application has been ' . $status . '.'
+                    . ($note !== null ? ' Reason: ' . $note : ''),
+                '/applications', 'fa-file-lines');
         }
         Session::flash('success', $message);
         $this->redirect('/applications');

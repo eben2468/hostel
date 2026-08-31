@@ -183,12 +183,19 @@ $initial  = strtoupper(substr($user['name'] ?? 'U', 0, 1));
             <?php endif; ?>
             <?php foreach ($flashes as $type => $msg): ?>
                 <?php
-                    $tone = $type === 'success' ? ['green','fa-circle-check']
-                          : ($type === 'error' ? ['red','fa-circle-exclamation'] : ['blue','fa-circle-info']);
+                    $tone = match ($type) {
+                        'success' => ['green', 'fa-circle-check'],
+                        'error'   => ['red',   'fa-circle-exclamation'],
+                        'warning' => ['amber', 'fa-triangle-exclamation'],
+                        default   => ['blue',  'fa-circle-info'],
+                    };
                     [$color, $ficon] = $tone;
+                    // Only a plain confirmation times out. Errors and warnings
+                    // carry detail worth reading twice, so they stay until dismissed.
+                    $autoHide = $type === 'success';
                 ?>
                 <div x-data="{show:true}" x-show="show" x-cloak x-transition.opacity.duration.300ms
-                     x-init="setTimeout(()=>show=false, 5000)" role="alert"
+                     <?= $autoHide ? 'x-init="setTimeout(()=>show=false, 5000)"' : '' ?> role="alert"
                      class="mb-4 flex items-start gap-3 rounded-xl border border-<?= $color ?>-200 bg-<?= $color ?>-50 p-4 text-<?= $color ?>-800 shadow-sm animate-fade-up">
                     <i class="fa-solid <?= $ficon ?> mt-0.5 text-<?= $color ?>-500"></i>
                     <span class="flex-1 text-sm font-medium"><?= e($msg) ?></span>

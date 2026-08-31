@@ -1,7 +1,9 @@
-<?php /** @var array $payments @var array $invoices @var bool $paystackEnabled @var array $feeSchedule */
+<?php /** @var array $payments @var array $invoices @var bool $paystackEnabled @var array $feeSchedule @var array $dues @var ?string $duesStudentType */
 $feeSchedule = $feeSchedule ?? [];
 $feeLabels = ['single' => 'Single', 'double' => 'Double', 'triple' => 'Triple', 'quad' => 'Quad'];
 ?>
+<?php require VIEW_PATH . '/partials/_arrears_panel.php'; ?>
+<?php require VIEW_PATH . '/partials/_dues_panel.php'; ?>
 <?php if ($feeSchedule): ?>
 <div class="ui-card p-5 mb-4" data-reveal="0">
     <h3 class="font-display font-bold text-gray-800 mb-1 flex items-center gap-2"><span class="inline-flex w-8 h-8 rounded-lg bg-primary-50 text-primary-600 items-center justify-center"><i class="fa-solid fa-tags text-sm"></i></span>Hostel Fees</h3>
