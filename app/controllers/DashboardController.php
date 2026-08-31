@@ -53,9 +53,14 @@ class DashboardController extends Controller
             "SELECT p.*, s.full_name FROM payments p JOIN students s ON s.id=p.student_id WHERE 1{$payP} ORDER BY p.paid_at DESC LIMIT 8", $pbP
         );
         $topDebtors = Database::all(
+            // The grouped columns are listed in full rather than relying on
+            // s.id being the primary key: MySQL infers that dependency, MariaDB
+            // under ONLY_FULL_GROUP_BY does not. Grouping is unchanged either
+            // way, since s.id already identifies the row.
             "SELECT s.full_name, s.student_id, SUM(i.balance) AS owed
              FROM invoices i JOIN students s ON s.id=i.student_id
-             WHERE i.status IN ('unpaid','partial'){$invI} GROUP BY s.id ORDER BY owed DESC LIMIT 5", $ibI
+             WHERE i.status IN ('unpaid','partial'){$invI}
+             GROUP BY s.id, s.full_name, s.student_id ORDER BY owed DESC LIMIT 5", $ibI
         );
         $this->view('dashboard/finance', [
             'pageTitle' => 'Finance Dashboard', 'stats' => $stats, 'trend' => $trend,

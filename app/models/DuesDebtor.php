@@ -308,15 +308,20 @@ class DuesDebtor extends Model
      */
     public static function listFor(?int $hostelId, string $status = '', string $search = ''): array
     {
+        // The matched student is fetched with correlated subqueries rather than
+        // a LEFT JOIN + GROUP BY. A debtor row can match more than one account,
+        // and collapsing that with GROUP BY while selecting s.* is rejected
+        // outright by MySQL's default only_full_group_by (error 1055).
+        $match = "(d.student_no_norm IS NOT NULL
+                   AND UPPER(REPLACE(REPLACE(s.student_id,'-',''),' ','')) = d.student_no_norm)
+                  OR (d.phone_norm IS NOT NULL
+                      AND RIGHT(REPLACE(REPLACE(s.phone,' ',''),'-',''), 9) = d.phone_norm)";
+
         $sql = "SELECT d.*, b.filename, b.created_at AS uploaded_at,
-                       s.id AS matched_student_id, s.full_name AS matched_name
+                       (SELECT s.id FROM students s WHERE {$match} ORDER BY s.id LIMIT 1)        AS matched_student_id,
+                       (SELECT s.full_name FROM students s WHERE {$match} ORDER BY s.id LIMIT 1) AS matched_name
                 FROM dues_debtors d
                 JOIN dues_debtor_batches b ON b.id = d.batch_id
-                LEFT JOIN students s
-                       ON (d.student_no_norm IS NOT NULL
-                           AND UPPER(REPLACE(REPLACE(s.student_id,'-',''),' ','')) = d.student_no_norm)
-                       OR (d.phone_norm IS NOT NULL
-                           AND RIGHT(REPLACE(REPLACE(s.phone,' ',''),'-',''), 9) = d.phone_norm)
                 WHERE 1";
         $params = [];
         if ($hostelId !== null) {
@@ -332,7 +337,7 @@ class DuesDebtor extends Model
             $like = "%{$search}%";
             array_push($params, $like, $like, $like);
         }
-        $sql .= " GROUP BY d.id ORDER BY d.status, d.academic_year DESC, d.semester DESC, d.full_name";
+        $sql .= " ORDER BY d.status, d.academic_year DESC, d.semester DESC, d.full_name";
         return self::guarded(fn() => Database::all($sql, $params));
     }
 
