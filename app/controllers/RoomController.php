@@ -48,6 +48,92 @@ class RoomController extends Controller
         ]);
     }
 
+    public function importForm(): void
+    {
+        $this->requireAuth('admin', 'hostel_admin');
+        $this->view('rooms/import', [
+            'pageTitle' => 'Import Rooms',
+            'hostels'   => $this->hostelOptions(),
+        ]);
+    }
+
+    /** Create many rooms at once from an uploaded sheet. */
+    public function import(): void
+    {
+        $this->requireAuth('admin', 'hostel_admin');
+        Csrf::check();
+
+        $hostelId = Scope::isGlobal() ? (int) $this->input('hostel_id') : (int) Scope::hostelId();
+        if (!$hostelId) {
+            Session::flash('error', 'Please choose the hostel these rooms belong to.');
+            $this->redirect('/rooms/import');
+        }
+        $this->guardHostel($hostelId);
+
+        $file  = $_FILES['file'] ?? null;
+        $error = $this->validateUpload($file);
+        if ($error !== null) {
+            Session::flash('error', $error);
+            $this->redirect('/rooms/import');
+        }
+
+        $read = \App\Services\SheetReader::read($file['tmp_name'], $file['name']);
+        if (!$read['ok']) {
+            Session::flash('error', $read['error']);
+            $this->redirect('/rooms/import');
+        }
+
+        $result = \App\Services\RoomImporter::import(
+            $read['rows'], $hostelId, isset($_POST['create_floors'])
+        );
+        if ($result['error'] !== null) {
+            Session::flash('error', $result['error']);
+            $this->redirect('/rooms/import');
+        }
+
+        Audit::log('import', 'rooms', $hostelId,
+            $result['created'] . ' rooms from ' . $file['name']);
+
+        Session::flash('success', sprintf(
+            '%d room(s) created with %d bed(s)%s.',
+            $result['created'], $result['beds'],
+            $result['floors'] ? ', and ' . $result['floors'] . ' floor(s) added' : ''
+        ));
+        if ($result['skipped']) {
+            $shown = array_slice($result['skipped'], 0, 8);
+            Session::flash('warning', count($result['skipped']) . ' row(s) skipped: '
+                . implode(' ', $shown)
+                . (count($result['skipped']) > 8 ? ' …and ' . (count($result['skipped']) - 8) . ' more.' : ''));
+        }
+        $this->redirect('/rooms');
+    }
+
+    /** @return string|null an error message, or null when the upload is usable */
+    private function validateUpload(?array $file): ?string
+    {
+        if (!$file || ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            return 'Please choose a file to upload.';
+        }
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            return 'Upload failed (error code ' . $file['error'] . ').';
+        }
+        // CLI has no HTTP upload to verify; the web path always checks.
+        if (PHP_SAPI !== 'cli' && !is_uploaded_file($file['tmp_name'])) {
+            return 'That file could not be read.';
+        }
+        if ($file['size'] <= 0 || $file['size'] > 5 * 1024 * 1024) {
+            return 'The file must be between 1 byte and 5 MB.';
+        }
+        $ext = strtolower(pathinfo((string) $file['name'], PATHINFO_EXTENSION));
+        if ($ext === 'xls') {
+            return 'Old-style .xls files are not supported. Save the file as .xlsx or .csv and upload that.';
+        }
+        if (!in_array($ext, \App\Services\SheetReader::EXTENSIONS, true)) {
+            return 'Unsupported file type. Upload a .xlsx, .csv, .txt or .tsv file.';
+        }
+        return null;
+    }
+
     /** Hostels a user may attach a room to: all for admin, only their own otherwise. */
     private function hostelOptions(): array
     {

@@ -9,7 +9,10 @@ $statuses  = ['available','occupied','reserved','maintenance','closed'];
 ?>
 <div class="flex items-center justify-between mb-4">
     <p class="text-sm text-gray-500"><span class="font-semibold text-gray-700"><?= count($rooms) ?></span> room(s)<?php if ($hasFilters): ?> <span class="text-gray-400">found</span><?php endif; ?></p>
-    <a href="<?= url('/rooms/create') ?>" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Add Room</a>
+    <div class="flex flex-wrap gap-2">
+        <a href="<?= url('/rooms/import') ?>" class="btn btn-ghost"><i class="fa-solid fa-file-arrow-up"></i> Import Rooms</a>
+        <a href="<?= url('/rooms/create') ?>" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Add Room</a>
+    </div>
 </div>
 
 <!-- Filters -->
