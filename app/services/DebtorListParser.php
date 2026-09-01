@@ -187,8 +187,8 @@ class DebtorListParser
             'student_no_norm' => $studentNo !== null ? DuesDebtor::normaliseStudentNo($studentNo) : null,
             'phone'           => $phone,
             'phone_norm'      => $phone !== null ? DuesDebtor::normalisePhone($phone) : null,
-            'room_label'      => self::findRoom($cells, $studentNo, $phone),
-            'amount'          => self::findAmount($cells),
+            'room_label'      => $room = self::findRoom($cells, $studentNo, $phone),
+            'amount'          => self::findAmount($cells, $studentNo, $phone, $room),
         ];
     }
 
@@ -259,15 +259,42 @@ class DebtorListParser
         return null;
     }
 
-    /** A decimal amount such as "150.00"; plain integers are too ambiguous. */
-    private static function findAmount(array $cells): ?float
+    /**
+     * The amount owed.
+     *
+     * A spreadsheet holds a currency cell as the bare number 150 — the ".00" is
+     * display formatting and never reaches us — so plain integers have to be
+     * accepted. The only other bare integer on these rows is the leading serial
+     * number, which is dropped by position: after blank cells are stripped, it
+     * is always the row's first cell.
+     */
+    private static function findAmount(array $cells, ?string $studentNo, ?string $phone, ?string $room): ?float
     {
-        foreach ($cells as $c) {
-            $v = str_replace([',', ' '], '', trim($c));
-            if (preg_match('/^\d{1,9}\.\d{1,2}$/', $v)) {
-                return (float) $v;
+        $candidates = [];
+        foreach ($cells as $i => $c) {
+            if ($c === $studentNo || $c === $phone) {
+                continue;
+            }
+            if ($room !== null && preg_replace('/\s+/', '', strtoupper($c)) === $room) {
+                continue;
+            }
+            $v = str_ireplace(['GHS', 'GH₵', '₵', ',', ' '], '', trim($c));
+            if ($v !== '' && preg_match('/^\d{1,9}(\.\d{1,2})?$/', $v)) {
+                $candidates[$i] = ['value' => (float) $v, 'decimal' => str_contains($v, '.')];
             }
         }
-        return null;
+        // The row's first cell is the serial number, not money.
+        unset($candidates[0]);
+        if (!$candidates) {
+            return null;
+        }
+        // A written-out decimal is unambiguous; otherwise the last number wins,
+        // since the amount sits at the end of every list of this shape.
+        foreach ($candidates as $c) {
+            if ($c['decimal']) {
+                return $c['value'];
+            }
+        }
+        return end($candidates)['value'];
     }
 }

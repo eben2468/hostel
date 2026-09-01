@@ -243,12 +243,29 @@ class DuesDebtor extends Model
             $params[] = (int) $student['hostel_id'];
         }
 
-        return self::guarded(fn() => Database::all(
+        $rows = self::guarded(fn() => Database::all(
             "SELECT * FROM dues_debtors
              WHERE status = 'outstanding' AND (" . implode(' OR ', $keys) . "){$hostelSql}
              ORDER BY academic_year DESC, semester DESC, id",
             $params
         ));
+
+        // Record which key actually matched. Without this the student is told
+        // they owe money with no way to see why, and a stale room number sitting
+        // next to the notice reads as though the room caused it.
+        foreach ($rows as &$row) {
+            $why = [];
+            if ($no !== null && $row['student_no_norm'] === $no) {
+                $why['student_id'] = $row['student_no'];
+            }
+            if ($phone !== null && $row['phone_norm'] === $phone) {
+                $why['phone'] = $row['phone'];
+            }
+            $row['matched_on'] = $why;
+        }
+        unset($row);
+
+        return $rows;
     }
 
     /** Total still owed across the matched rows. */
@@ -317,7 +334,17 @@ class DuesDebtor extends Model
                   OR (d.phone_norm IS NOT NULL
                       AND RIGHT(REPLACE(REPLACE(s.phone,' ',''),'-',''), 9) = d.phone_norm)";
 
-        $sql = "SELECT d.*, b.filename, b.created_at AS uploaded_at,
+        // The same student ID against a different name means one of the two rows
+        // was mistyped — and the student who legitimately holds that ID gets
+        // blocked by a stranger's debt. Worth flagging permanently, not just in
+        // the warnings shown once at import.
+        $conflicts = "(SELECT COUNT(*) FROM dues_debtors x
+                        WHERE x.student_no_norm = d.student_no_norm
+                          AND x.student_no_norm IS NOT NULL
+                          AND x.id <> d.id
+                          AND IFNULL(x.full_name,'') <> IFNULL(d.full_name,'')) AS id_conflicts";
+
+        $sql = "SELECT d.*, b.filename, b.created_at AS uploaded_at, {$conflicts},
                        (SELECT s.id FROM students s WHERE {$match} ORDER BY s.id LIMIT 1)        AS matched_student_id,
                        (SELECT s.full_name FROM students s WHERE {$match} ORDER BY s.id LIMIT 1) AS matched_name
                 FROM dues_debtors d

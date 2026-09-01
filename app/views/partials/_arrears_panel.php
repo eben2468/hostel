@@ -37,7 +37,9 @@ $owed = DuesDebtor::totalOwed($arrears);
                 <thead class="text-gray-500 text-left text-xs uppercase tracking-wide">
                     <tr class="border-b border-gray-100">
                         <th class="py-2 pr-4 font-semibold">Semester</th>
-                        <th class="py-2 pr-4 font-semibold">Room</th>
+                        <!-- What matched, not where the debtor slept: the old room
+                             number here read as though the room caused the block. -->
+                        <th class="py-2 pr-4 font-semibold">Matched on</th>
                         <th class="py-2 font-semibold text-right">Amount</th>
                     </tr>
                 </thead>
@@ -45,7 +47,19 @@ $owed = DuesDebtor::totalOwed($arrears);
                     <?php foreach ($arrears as $d): ?>
                         <tr>
                             <td class="py-2 pr-4 text-gray-700"><?= e(DuesDebtor::termLabel($d)) ?></td>
-                            <td class="py-2 pr-4 text-gray-500"><?= e($d['room_label'] ?: '—') ?></td>
+                            <td class="py-2 pr-4 text-gray-500">
+                                <?php $why = $d['matched_on'] ?? []; ?>
+                                <?php if (!$why): ?>
+                                    —
+                                <?php else: ?>
+                                    <?php foreach ($why as $field => $value): ?>
+                                        <span class="block text-xs">
+                                            <span class="text-gray-400"><?= $field === 'phone' ? 'Phone' : 'Student ID' ?>:</span>
+                                            <span class="font-medium text-gray-700 tnum"><?= e($value) ?></span>
+                                        </span>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </td>
                             <td class="py-2 text-right font-semibold text-red-600 tnum">
                                 <?= $d['amount'] !== null ? money($d['amount']) : '—' ?>
                             </td>
@@ -65,8 +79,12 @@ $owed = DuesDebtor::totalOwed($arrears);
 
         <p class="text-xs text-gray-400 flex items-start gap-1.5">
             <i class="fa-solid fa-circle-info mt-0.5"></i>
-            Already paid? Take your receipt to the hostel office — an admin marks the debt settled and
-            you can apply straight away. If you believe this is not you, contact the office with your Student ID.
+            <span>
+                Already paid? Take your receipt to the hostel office — an admin marks the debt settled and
+                you can apply straight away. <span class="font-medium text-gray-500">If the Student ID or phone
+                number above is not yours</span>, it is a mistake in the hall's debtors list — show this page at
+                the office and it will be corrected. This has nothing to do with which room you picked.
+            </span>
         </p>
     </div>
 </div>

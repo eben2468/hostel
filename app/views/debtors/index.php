@@ -84,6 +84,21 @@ $owed        = array_sum(array_map(fn($d) => (float) ($d['amount'] ?? 0), $outst
     <?php endforeach; ?>
 </div>
 
+<?php $conflicted = array_filter($debtors, fn($d) => (int) ($d['id_conflicts'] ?? 0) > 0); ?>
+<?php if ($conflicted): ?>
+    <div class="mb-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">
+        <i class="fa-solid fa-triangle-exclamation mt-0.5 text-red-500"></i>
+        <div class="text-sm">
+            <p class="font-semibold">Duplicate student IDs — <?= count($conflicted) ?> row(s) affected</p>
+            <p class="text-red-700/80">
+                The same student ID appears against more than one name below, so one of those rows was mistyped.
+                Whoever legitimately holds that ID is being blocked from applying by someone else's debt.
+                Fix or remove the wrong row — the affected IDs are flagged in red in the table.
+            </p>
+        </div>
+    </div>
+<?php endif; ?>
+
 <?php if (count($outstanding) && !count($matched)): ?>
     <div class="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
         <i class="fa-solid fa-circle-info mt-0.5 text-amber-500"></i>
@@ -170,7 +185,15 @@ $owed        = array_sum(array_map(fn($d) => (float) ($d['amount'] ?? 0), $outst
                     <?php $isOut = $d['status'] === 'outstanding'; ?>
                     <tr class="<?= $isOut ? '' : 'opacity-60' ?>">
                         <td class="px-4 py-3 font-medium text-gray-700"><?= e($d['full_name'] ?: '—') ?></td>
-                        <td class="px-4 py-3 text-gray-500 tnum"><?= e($d['student_no'] ?: '—') ?></td>
+                        <td class="px-4 py-3 text-gray-500 tnum">
+                            <?= e($d['student_no'] ?: '—') ?>
+                            <?php if ((int) ($d['id_conflicts'] ?? 0) > 0): ?>
+                                <span class="mt-1 flex items-center gap-1 text-[11px] font-medium text-red-600"
+                                      title="This ID is also listed against a different name. One of the rows is mistyped, and whoever legitimately holds this ID is being blocked by the other person's debt.">
+                                    <i class="fa-solid fa-triangle-exclamation"></i>Also on <?= (int) $d['id_conflicts'] ?> other name<?= (int) $d['id_conflicts'] > 1 ? 's' : '' ?>
+                                </span>
+                            <?php endif; ?>
+                        </td>
                         <td class="px-4 py-3 text-gray-500 tnum"><?= e($d['phone'] ?: '—') ?></td>
                         <td class="px-4 py-3 text-gray-500"><?= e(trim(($d['semester'] ?? '') . ' ' . ($d['academic_year'] ?? ''))) ?: '—' ?></td>
                         <td class="px-4 py-3 text-gray-500"><?= e($d['room_label'] ?: '—') ?></td>
