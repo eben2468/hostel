@@ -27,11 +27,17 @@ class UserController extends Controller
         $this->users = new User();
     }
 
-    /** Roles the current actor is permitted to assign. */
+    /**
+     * Roles the current actor is permitted to assign.
+     *
+     * Only the super admin may set `student`: that role is not just a label —
+     * it needs a matching students record, so it is handled specially on save.
+     * Hostel admins stay limited to their own hostel's staff.
+     */
     private function assignableRoles(): array
     {
         return Scope::isGlobal()
-            ? ['admin','hostel_admin','finance','maintenance','security']
+            ? User::ALL_ROLES
             : ['finance','maintenance','security'];
     }
 
@@ -118,9 +124,20 @@ class UserController extends Controller
             $this->redirect('/users/create');
         }
 
+        $studentNo = trim((string) $this->input('student_id'));
+        if ($data['role'] === 'student'
+            && ($problem = $this->studentIdConflict($studentNo, 0)) !== null) {
+            Session::set('_old', $_POST);
+            Session::flash('error', $problem);
+            $this->redirect('/users/create');
+        }
+
         $data['password'] = Auth::hash((string) $this->input('password'));
         $id = $this->users->create($data);
-        Audit::log('create', 'users', $id);
+        if ($data['role'] === 'student') {
+            $this->attachStudentProfile($id, $data, $studentNo);
+        }
+        Audit::log('create', 'users', $id, 'role=' . $data['role']);
         Session::flash('success', 'User created.');
         $this->redirect('/users');
     }
@@ -132,11 +149,19 @@ class UserController extends Controller
         if (!$user) {
             $this->redirect('/users');
         }
+        // The student record survives a role change, so an account that was
+        // switched away from `student` still finds its ID here — that is what
+        // lets the role be switched back with everything intact.
+        $student = Database::first(
+            "SELECT student_id, hostel_id FROM students WHERE user_id = ? LIMIT 1", [$user['id']]
+        );
         $this->view('users/form', [
             'pageTitle' => 'Edit User',
             'user'      => $user,
             'roles'     => $this->assignableRoles(),
             'hostels'   => $this->hostelOptions(),
+            'studentNo' => $student['student_id'] ?? '',
+            'studentHostelId' => $student['hostel_id'] ?? null,
         ]);
     }
 
@@ -166,17 +191,37 @@ class UserController extends Controller
             $this->redirect('/users/' . $id . '/edit');
         }
 
+        // Reject a clashing Student ID before writing anything, so a failed save
+        // never leaves the account half-changed.
+        $studentNo = trim((string) $this->input('student_id'));
+        if ($data['role'] === 'student'
+            && ($problem = $this->studentIdConflict($studentNo, (int) $id)) !== null) {
+            Session::set('_old', $_POST);
+            Session::flash('error', $problem);
+            $this->redirect('/users/' . $id . '/edit');
+        }
+
         // Only change the password when a new one was supplied.
         $password = (string) $this->input('password');
         if ($password !== '') {
             $data['password'] = Auth::hash($password);
         }
         $this->users->update($id, $data);
+
+        if ($data['role'] === 'student') {
+            $this->attachStudentProfile((int) $id, $data, $studentNo);
+        }
+        // A role change away from `student` deliberately leaves the student
+        // record and its link alone. Every student-data path is gated on the
+        // role, so the link is inert meanwhile — and keeping it is what allows
+        // the role to be switched back with the profile still attached.
         // If this account belongs to a student, their notification address
         // lives on the student record — move it with the account.
         \App\Models\Student::syncContactFromUser((int) $id);
-        Audit::log('update', 'users', $id);
-        Session::flash('success', 'User updated.');
+        Audit::log('update', 'users', $id, 'role=' . $data['role']);
+        Session::flash('success', $data['role'] === 'student'
+            ? 'User updated and linked to student record ' . $studentNo . '.'
+            : 'User updated.');
         $this->redirect('/users');
     }
 
@@ -286,6 +331,22 @@ class UserController extends Controller
             return null;
         }
 
+        // A student account is only usable with a student record behind it, so
+        // both the institutional ID and a hostel are required up front.
+        $studentNo = trim((string) $this->input('student_id'));
+        if ($role === 'student') {
+            if ($studentNo === '') {
+                Session::set('_old', $_POST);
+                Session::flash('error', 'A Student ID is required for a student account.');
+                return null;
+            }
+            if (!$this->input('hostel_id') && Scope::isGlobal()) {
+                Session::set('_old', $_POST);
+                Session::flash('error', 'A student must be assigned to a hostel.');
+                return null;
+            }
+        }
+
         // The super admin role is global (no hostel). Hostel-bound actors always
         // write their own hostel; the super admin picks one for other roles.
         if ($role === 'admin') {
@@ -298,15 +359,59 @@ class UserController extends Controller
 
         // Staff no longer choose a username; they sign in with their email, so we
         // mirror the email into the (still required, unique) username column.
+        // Students keep signing in with their Student ID, as registration sets it.
         return [
             'name'      => $this->input('name'),
-            'username'  => $this->input('email'),
+            'username'  => $role === 'student' ? $studentNo : $this->input('email'),
             'email'     => $this->input('email'),
             'phone'     => $this->input('phone'),
             'role'      => $role,
             'hostel_id' => $hostelId,
             'is_active' => $this->input('is_active', '1') === '1' ? 1 : 0,
         ];
+    }
+
+    /**
+     * Give a user account the student record its role requires.
+     *
+     * Looked up by institutional ID rather than user_id, so an account that was
+     * changed to another role and back reconnects to its existing record — with
+     * its allocations, invoices, payments and applications — instead of gaining
+     * a second, empty one.
+     *
+     */
+    private function attachStudentProfile(int $userId, array $data, string $studentNo): void
+    {
+        $existing = Database::first("SELECT id, user_id FROM students WHERE student_id = ? LIMIT 1", [$studentNo]);
+
+        if ($existing) {
+            // Only the link and contact details are touched; programme, level,
+            // gender, photo and the rest of the profile are left exactly as they are.
+            Database::run(
+                "UPDATE students SET user_id = ?, hostel_id = ?, full_name = ?, email = ?, phone = ? WHERE id = ?",
+                [$userId, $data['hostel_id'], $data['name'], $data['email'], $data['phone'], $existing['id']]
+            );
+            return;
+        }
+
+        Database::insert(
+            "INSERT INTO students (user_id, hostel_id, student_id, full_name, email, phone, status)
+             VALUES (?,?,?,?,?,?, 'active')",
+            [$userId, $data['hostel_id'], $studentNo, $data['name'], $data['email'], $data['phone']]
+        );
+    }
+
+    /**
+     * Whether a Student ID is already spoken for by a different account.
+     * Checked before any write so a rejected save changes nothing.
+     */
+    private function studentIdConflict(string $studentNo, int $userId): ?string
+    {
+        $row = Database::first("SELECT user_id FROM students WHERE student_id = ? LIMIT 1", [$studentNo]);
+        if ($row && $row['user_id'] !== null && (int) $row['user_id'] !== $userId) {
+            return 'Student ID ' . $studentNo . ' is already linked to another user account.';
+        }
+        return null;
     }
 
     /** True when another user already uses the username or email. */

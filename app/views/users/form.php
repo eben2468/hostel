@@ -1,12 +1,24 @@
 <?php /** @var ?array $user */
 /** @var array $roles assignable role values */
 /** @var array $hostels selectable hostels */
+/** @var string $studentNo Student ID of the linked student record, if any */
 $isEdit = $user !== null;
 $action = $isEdit ? url('/users/' . $user['id']) : url('/users');
+$studentNo = $studentNo ?? '';
 $roleLabels = [
     'admin' => 'Super Admin (global)', 'hostel_admin' => 'Hostel Admin', 'finance' => 'Finance Officer',
     'maintenance' => 'Maintenance Officer', 'security' => 'Security Officer', 'student' => 'Student',
 ];
+$currentRole = (string) ($user['role'] ?? old('role') ?: 'finance');
+// A role the actor cannot assign must still appear, selected. Without it the
+// browser falls back to the first option — which silently turned a student
+// into a Super Admin on save.
+if (!in_array($currentRole, $roles, true)) {
+    array_unshift($roles, $currentRole);
+}
+// Which hostel to preselect. A role change to Super Admin blanks users.hostel_id,
+// so the linked student record's hostel is the fallback that restores it.
+$selectedHostel = (string) ($user['hostel_id'] ?? old('hostel_id') ?: ($studentHostelId ?? ''));
 function uval(?array $u, string $k): string { return e($u[$k] ?? old($k)); }
 ?>
 <a href="<?= url('/users') ?>" class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary-600 transition"><i class="fa-solid fa-arrow-left"></i>Back to users</a>
@@ -38,24 +50,39 @@ function uval(?array $u, string $k): string { return e($u[$k] ?? old($k)); }
 
     <section>
         <h3 class="font-display font-bold text-gray-800 border-b border-gray-100 pb-2.5 mb-4 flex items-center gap-2"><i class="fa-solid fa-user-shield text-primary-500 text-sm"></i>Role &amp; Access</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+             x-data="{ role: '<?= e($currentRole) ?>' }">
             <div>
                 <label class="block text-sm font-medium text-gray-600 mb-1.5">Role</label>
-                <select name="role" class="ui-input" x-data x-on:change="$dispatch('role-changed', $event.target.value)">
+                <select name="role" class="ui-input" x-model="role">
                     <?php foreach ($roles as $r): ?>
-                        <option value="<?= e($r) ?>" <?= ($user['role'] ?? old('role'))===$r?'selected':'' ?>><?= e($roleLabels[$r] ?? ucfirst($r)) ?></option>
+                        <option value="<?= e($r) ?>" <?= $currentRole === $r ? 'selected' : '' ?>><?= e($roleLabels[$r] ?? ucfirst($r)) ?></option>
                     <?php endforeach; ?>
                 </select>
+                <p x-cloak x-show="role === 'student'" class="text-xs text-primary-600 mt-1">
+                    <i class="fa-solid fa-circle-info"></i> Signs in with their Student ID, and is linked to the student record below.
+                </p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-600 mb-1.5">Hostel</label>
                 <select name="hostel_id" class="ui-input">
                     <option value="">— Global / None —</option>
                     <?php foreach ($hostels as $h): ?>
-                        <option value="<?= (int)$h['id'] ?>" <?= (string)($user['hostel_id'] ?? old('hostel_id'))===(string)$h['id']?'selected':'' ?>><?= e($h['name']) ?></option>
+                        <option value="<?= (int)$h['id'] ?>" <?= $selectedHostel === (string)$h['id'] ? 'selected' : '' ?>><?= e($h['name']) ?></option>
                     <?php endforeach; ?>
                 </select>
                 <p class="text-xs text-gray-400 mt-1">Super Admins are global; all other roles are bound to one hostel.</p>
+            </div>
+
+            <div x-cloak x-show="role === 'student'">
+                <label class="block text-sm font-medium text-gray-600 mb-1.5">Student ID <span class="text-red-500">*</span></label>
+                <input name="student_id" value="<?= e(old('student_id') ?: $studentNo) ?>" class="ui-input tnum"
+                       placeholder="e.g. 226TR02000104" x-bind:required="role === 'student'">
+                <p class="text-xs text-gray-400 mt-1">
+                    <?= $studentNo !== ''
+                        ? 'Filled in from this account\'s existing student record — leave it as is to keep their data.'
+                        : 'Links this account to a student record; one is created if it does not exist yet.' ?>
+                </p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-600 mb-1.5">Status</label>
