@@ -1,4 +1,27 @@
-<?php /** @var array $user */ ?>
+<?php /** @var array $user @var ?array $student */
+$student = $student ?? null;
+$guardianMissing = $student !== null
+    && (trim((string) $student['guardian_name']) === '' || trim((string) $student['guardian_phone']) === '');
+/** Repopulated value after a rejected save, else what is stored. */
+$val = function (string $key, $stored) {
+    $old = \App\Core\Session::get('_old', []);
+    return array_key_exists($key, $old) ? e($old[$key]) : e((string) $stored);
+};
+?>
+
+<?php if ($guardianMissing): ?>
+    <div class="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800 max-w-5xl">
+        <i class="fa-solid fa-user-shield mt-0.5 text-amber-500"></i>
+        <div class="text-sm">
+            <p class="font-semibold">Please add your parent or guardian's details</p>
+            <p class="text-amber-700/80">
+                The hostel needs someone to contact about you in an emergency. Fill in the
+                <span class="font-medium">Parent / Guardian</span> section below and save — it only takes a moment.
+            </p>
+        </div>
+    </div>
+<?php endif; ?>
+
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-5xl">
     <div class="ui-card p-6" data-reveal="0">
         <h3 class="font-display font-bold text-gray-800 mb-5 flex items-center gap-2"><i class="fa-solid fa-id-badge text-primary-500 text-sm"></i>Profile Information</h3>
@@ -19,13 +42,40 @@
                 </div>
             </div>
             <div><label class="block text-sm font-medium text-gray-600 mb-1.5">Full Name</label>
-                <input name="name" value="<?= e($user['name']) ?>" class="ui-input"></div>
+                <input name="name" value="<?= $val('name', $user['name']) ?>" required class="ui-input"></div>
             <div><label class="block text-sm font-medium text-gray-600 mb-1.5">Email</label>
-                <input type="email" name="email" value="<?= e($user['email']) ?>" class="ui-input"></div>
+                <input type="email" name="email" value="<?= $val('email', $user['email']) ?>" required class="ui-input">
+                <p class="text-xs text-gray-400 mt-1">Must not already be used by another account.</p></div>
             <div><label class="block text-sm font-medium text-gray-600 mb-1.5">Phone</label>
-                <input name="phone" value="<?= e($user['phone']) ?>" class="ui-input"></div>
+                <input name="phone" value="<?= $val('phone', $user['phone']) ?>" class="ui-input"></div>
             <div><label class="block text-sm font-medium text-gray-600 mb-1.5">Role</label>
                 <input value="<?= e(role_label($user['role'])) ?>" disabled class="ui-input bg-gray-50 text-gray-500 cursor-not-allowed"></div>
+
+            <?php if ($student !== null): ?>
+                <div class="pt-2 border-t border-gray-100">
+                    <p class="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-1">
+                        <i class="fa-solid fa-user-shield text-primary-500 text-xs"></i>Parent / Guardian
+                        <?php if ($guardianMissing): ?>
+                            <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Needed</span>
+                        <?php endif; ?>
+                    </p>
+                    <p class="text-xs text-gray-400">Who the hostel should contact about you in an emergency.</p>
+                </div>
+                <div><label class="block text-sm font-medium text-gray-600 mb-1.5">Guardian's Full Name</label>
+                    <input name="guardian_name" value="<?= $val('guardian_name', $student['guardian_name']) ?>" required class="ui-input"></div>
+                <div><label class="block text-sm font-medium text-gray-600 mb-1.5">Guardian's Phone</label>
+                    <input name="guardian_phone" value="<?= $val('guardian_phone', $student['guardian_phone']) ?>" required
+                           inputmode="tel" class="ui-input" placeholder="e.g. 0244000000"></div>
+                <div><label class="block text-sm font-medium text-gray-600 mb-1.5">Relationship <span class="text-gray-400 font-normal">(optional)</span></label>
+                    <select name="guardian_relationship" class="ui-input">
+                        <option value="">Select relationship</option>
+                        <?php $rel = $val('guardian_relationship', $student['guardian_relationship']); ?>
+                        <?php foreach (['Father','Mother','Guardian','Brother','Sister','Uncle','Aunt','Other'] as $r): ?>
+                            <option value="<?= $r ?>" <?= $rel === $r ? 'selected' : '' ?>><?= $r ?></option>
+                        <?php endforeach; ?>
+                    </select></div>
+            <?php endif; ?>
+
             <button class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i>Save Changes</button>
         </form>
     </div>
