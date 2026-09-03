@@ -65,6 +65,34 @@ class Room extends Model
     }
 
     /** Rooms with at least one free bed (scoped to the caller's hostel). */
+    /** Room statuses that still accept an application. */
+    public const OPEN_STATUSES = ['available', 'reserved'];
+
+    /**
+     * Why a room cannot be applied for, or null when it can.
+     *
+     * The room lists already filter these out, but a room fills up while a
+     * student is still deciding — so the same rule has to be re-checked when
+     * the form is submitted, and this keeps both places using one definition.
+     *
+     * @return string|null a message naming the room, ready to show
+     */
+    public static function unavailableReason(array $room): ?string
+    {
+        $label = 'Room ' . ($room['room_number'] ?? '');
+
+        if (!in_array($room['status'], self::OPEN_STATUSES, true)) {
+            return $label . ' is not open for applications (' . str_replace('_', ' ', $room['status'])
+                . '). Please choose a different room.';
+        }
+        $free = (int) $room['capacity'] - (int) $room['occupied'];
+        if ($free <= 0) {
+            return $label . ' is now full — all ' . (int) $room['capacity']
+                . ' bed(s) have been taken. Please choose a different room.';
+        }
+        return null;
+    }
+
     public function available(): array
     {
         [$scope, $bind] = Scope::on('r.hostel_id');

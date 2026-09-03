@@ -3,6 +3,11 @@ use App\Core\Auth;
 $applicationsOpen = $applicationsOpen ?? null;
 $dues = $dues ?? [];
 $arrears = $arrears ?? []; // only populated for a student; staff never see the panel
+$filters = $filters ?? ['q' => '', 'status' => '', 'payment' => '', 'hostel' => '', 'term' => ''];
+$hostels = $hostels ?? null;   // null = hostel-bound admin, no hostel picker
+$terms   = $terms ?? [];
+$hasFilters = implode('', $filters) !== '';
+$status  = $filters['status']; // kept for the student view's shared markup
 $duesCompact = true; // The list is a reminder; the full how-to lives on the form.
 
 /** Label, pill classes and icon for a dues-reference verification state. */
@@ -17,14 +22,10 @@ $colspan = $isStudent ? 7 : 8;
 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
     <div class="flex items-center gap-3">
         <?php if (!$isStudent): ?>
-            <form method="get" class="flex gap-2">
-                <select name="status" onchange="this.form.submit()" class="ui-input w-auto">
-                    <option value="">All applications</option>
-                    <?php foreach (['pending','approved','rejected','waiting','cancelled','expired'] as $s): ?>
-                        <option value="<?= $s ?>" <?= $status===$s?'selected':'' ?>><?= ucfirst($s) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </form>
+            <p class="text-sm text-gray-500">
+                <span class="font-semibold text-gray-700"><?= (int) ($pager['total'] ?? count($applications)) ?></span>
+                application(s)<?= $hasFilters ? ' <span class="text-gray-400">found</span>' : '' ?>
+            </p>
         <?php endif; ?>
         <?php if (Auth::hasRole('hostel_admin') && $applicationsOpen !== null): ?>
             <!-- Hostel admin toggle: open/close student applications -->
@@ -69,6 +70,68 @@ $colspan = $isStudent ? 7 : 8;
 <?php if ($isStudent): ?>
     <?php require VIEW_PATH . '/partials/_arrears_panel.php'; ?>
     <?php require VIEW_PATH . '/partials/_dues_panel.php'; ?>
+<?php else: ?>
+    <!-- Filters. A GET form, so any result set is a shareable URL and the
+         pager carries the filters across pages. -->
+    <form method="get" action="<?= url('/applications') ?>" class="ui-card p-3 mb-4 flex flex-wrap items-end gap-3" data-reveal="0">
+        <div class="flex-1 min-w-[13rem]">
+            <label class="block text-[11px] font-medium text-gray-500 mb-1">Search</label>
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
+                <input name="q" value="<?= e($filters['q']) ?>" class="ui-input pl-8"
+                       placeholder="Student, ID, reference, room…">
+            </div>
+        </div>
+
+        <div class="min-w-[9rem]">
+            <label class="block text-[11px] font-medium text-gray-500 mb-1">Status</label>
+            <select name="status" class="ui-input" onchange="this.form.submit()">
+                <option value="">All</option>
+                <?php foreach (['pending','approved','rejected','waiting','cancelled','expired'] as $s): ?>
+                    <option value="<?= $s ?>" <?= $filters['status'] === $s ? 'selected' : '' ?>><?= ucfirst($s) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <div class="min-w-[10rem]">
+            <label class="block text-[11px] font-medium text-gray-500 mb-1">Dues payment</label>
+            <select name="payment" class="ui-input" onchange="this.form.submit()">
+                <option value="">All</option>
+                <?php foreach (['unverified' => 'Awaiting check', 'verified' => 'Verified', 'not_found' => 'Not found'] as $v => $label): ?>
+                    <option value="<?= $v ?>" <?= $filters['payment'] === $v ? 'selected' : '' ?>><?= $label ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <?php if ($hostels !== null): ?>
+            <div class="min-w-[10rem]">
+                <label class="block text-[11px] font-medium text-gray-500 mb-1">Hostel</label>
+                <select name="hostel" class="ui-input" onchange="this.form.submit()">
+                    <option value="">All hostels</option>
+                    <?php foreach ($hostels as $h): ?>
+                        <option value="<?= (int) $h['id'] ?>" <?= $filters['hostel'] === (string) $h['id'] ? 'selected' : '' ?>><?= e($h['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($terms): ?>
+            <div class="min-w-[9rem]">
+                <label class="block text-[11px] font-medium text-gray-500 mb-1">Academic year</label>
+                <select name="term" class="ui-input" onchange="this.form.submit()">
+                    <option value="">All years</option>
+                    <?php foreach ($terms as $t): ?>
+                        <option value="<?= e($t) ?>" <?= $filters['term'] === $t ? 'selected' : '' ?>><?= e($t) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        <?php endif; ?>
+
+        <button class="btn btn-ghost"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
+        <?php if ($hasFilters): ?>
+            <a href="<?= url('/applications') ?>" class="btn btn-ghost border-transparent text-gray-500 hover:text-red-600"><i class="fa-solid fa-xmark"></i> Clear</a>
+        <?php endif; ?>
+    </form>
 <?php endif; ?>
 
 <div class="ui-card overflow-hidden" data-reveal="0">

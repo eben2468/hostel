@@ -26,7 +26,9 @@ $roomData = array_map(fn($r) => [
 <form method="post" action="<?= url('/applications') ?>" class="ui-card p-6 space-y-5 max-w-3xl">
     <?= csrf_field() ?>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4"
-         x-data="{ roomType: '', rooms: <?= htmlspecialchars(json_encode($roomData), ENT_QUOTES) ?> }">
+         <?php /* roomType is seeded from the last submission so a rejected save
+                  only costs them the room itself, not the rest of the form. */ ?>
+         x-data="{ roomType: '<?= old('preferred_room_type') ?>', rooms: <?= htmlspecialchars(json_encode($roomData), ENT_QUOTES) ?> }">
         <?php if ($isStaff): ?>
             <div class="sm:col-span-2"><label class="block text-sm font-medium text-gray-600 mb-1">Student *</label>
                 <select name="student_id" required class="ui-input">
@@ -50,7 +52,11 @@ $roomData = array_map(fn($r) => [
                     <option :value="r.id" x-text="r.label"></option>
                 </template>
             </select>
-            <?php if (!$isStaff && !$preferredRooms): ?><p class="text-xs text-gray-400 mt-1">No rooms currently available in your hostel — you can still apply without a preference.</p><?php endif; ?>
+            <?php if (!$isStaff && !$preferredRooms): ?>
+                <p class="text-xs text-gray-400 mt-1">No rooms currently available in your hostel — you can still apply without a preference.</p>
+            <?php elseif (!$isStaff): ?>
+                <p class="text-xs text-gray-400 mt-1">Only rooms with a free bed are listed. Rooms fill up quickly, so your choice is checked again when you submit.</p>
+            <?php endif; ?>
             <p x-cloak style="display:none" x-show="roomType && rooms.filter(x => x.type === roomType).length === 0" class="text-xs text-amber-600 mt-1">No <span x-text="roomType"></span> rooms available right now — pick another type or leave as “No preference”.</p>
         </div>
         <div class="sm:col-span-2"><label class="block text-sm font-medium text-gray-600 mb-1">Medical Conditions</label>

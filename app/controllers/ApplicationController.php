@@ -50,8 +50,14 @@ class ApplicationController extends Controller
             return;
         }
 
-        $status = trim($_GET['status'] ?? '');
-        $pager = $this->apps->paginatedWithStudent($status, \App\Core\Paginator::currentPage());
+        $filters = [
+            'q'       => trim($_GET['q'] ?? ''),
+            'status'  => trim($_GET['status'] ?? ''),
+            'payment' => trim($_GET['payment'] ?? ''),
+            'hostel'  => trim($_GET['hostel'] ?? ''),
+            'term'    => trim($_GET['term'] ?? ''),
+        ];
+        $pager = $this->apps->paginatedWithStudent($filters, \App\Core\Paginator::currentPage());
         // Hostel admins get an open/close toggle for their own hostel; the global
         // admin has no single hostel, so no toggle is shown (null).
         $hostelId = \App\Core\Scope::hostelId();
@@ -63,7 +69,10 @@ class ApplicationController extends Controller
             'applications'     => $pager['rows'],
             'pager'            => $pager,
             'isStudent'        => false,
-            'status'           => $status,
+            'filters'          => $filters,
+            // Only the super admin can span hostels, so only they get the picker.
+            'hostels'          => \App\Core\Scope::isGlobal() ? (new Hostel())->all('name') : null,
+            'terms'            => $this->apps->termOptions(),
             'applicationsOpen' => $applicationsOpen,
         ]);
     }
@@ -155,6 +164,20 @@ class ApplicationController extends Controller
         if ($room && $studentHostel !== null && (int) $room['hostel_id'] !== $studentHostel) {
             $room = null; $roomId = null;
         }
+
+        // The room may have filled up between opening the form and submitting it.
+        // Send the student back with their answers intact so they only have to
+        // change the room; staff are told, but their application still goes in
+        // with the preference cleared.
+        if ($room && ($full = Room::unavailableReason($room)) !== null) {
+            if (Auth::hasRole('student')) {
+                Session::set('_old', $_POST);
+                Session::flash('error', $full);
+                $this->redirect('/applications/create');
+            }
+            $roomFullNotice = $full;
+            $room = null; $roomId = null;
+        }
         // Preferred hostel follows the room when picked, else the student's membership.
         $preferredHostelId = $room ? (int) $room['hostel_id'] : $studentHostel;
 
@@ -213,8 +236,15 @@ class ApplicationController extends Controller
         // Staff are not blocked by arrears — they may be recording an
         // application for someone who has just paid at the desk — but they are
         // told, so an unpaid debt is never approved by accident.
+        $notes = [];
+        if (isset($roomFullNotice)) {
+            $notes[] = $roomFullNotice . ' The application was saved without a preferred room.';
+        }
         if (!Auth::hasRole('student') && ($arrears = DuesDebtor::outstandingFor($student))) {
-            Session::flash('warning', 'Note: ' . $this->arrearsMessage($arrears, false));
+            $notes[] = 'This student has ' . $this->arrearsMessage($arrears, false);
+        }
+        if ($notes) {
+            Session::flash('warning', implode(' ', $notes));
         }
         $this->redirect('/applications');
     }
