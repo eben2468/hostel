@@ -268,10 +268,10 @@ $colspan = $isStudent ? 7 : 8;
                                     </span>
 
                                     <?php if ($a['status'] === 'pending'): ?>
-                                        <a href="<?= url('/allocations/create?student='.$a['student_id']) ?>" class="inline-flex w-8 h-8 items-center justify-center rounded-lg text-gray-400 hover:bg-primary-50 hover:text-primary-600 transition" title="Allocate"><i class="fa-solid fa-bed"></i></a>
+                                        <a href="<?= url('/allocations/create?student='.$a['student_id'].($a['preferred_room_id'] ? '&room='.(int)$a['preferred_room_id'] : '')) ?>" class="inline-flex w-8 h-8 items-center justify-center rounded-lg text-gray-400 hover:bg-primary-50 hover:text-primary-600 transition" title="Allocate"><i class="fa-solid fa-bed"></i></a>
                                     <?php endif; ?>
                                 <?php elseif ($a['status'] === 'approved'): ?>
-                                    <a href="<?= url('/allocations/create?student='.$a['student_id']) ?>" class="inline-flex items-center gap-1 text-primary-600 hover:underline text-xs font-medium"><i class="fa-solid fa-bed"></i> Allocate room</a>
+                                    <a href="<?= url('/allocations/create?student='.$a['student_id'].($a['preferred_room_id'] ? '&room='.(int)$a['preferred_room_id'] : '')) ?>" class="inline-flex items-center gap-1 text-primary-600 hover:underline text-xs font-medium"><i class="fa-solid fa-bed"></i> Allocate room</a>
                                 <?php else: ?>
                                     <span class="text-gray-300">—</span>
                                 <?php endif; ?>

@@ -21,7 +21,7 @@ class Room extends Model
             "SELECT r.*, h.name AS hostel_name
              FROM rooms r LEFT JOIN hostels h ON h.id = r.hostel_id
              WHERE 1{$scope}
-             ORDER BY h.name, r.room_number",
+             ORDER BY h.name, " . self::ORDER_BY_NUMBER . "",
             $bind
         );
     }
@@ -60,13 +60,27 @@ class Room extends Model
         [$scope, $bind] = Scope::on('r.hostel_id');
         $sql .= $scope;
         array_push($params, ...$bind);
-        $sql .= " ORDER BY h.name, r.room_number";
+        $sql .= " ORDER BY h.name, " . self::ORDER_BY_NUMBER;
         return Database::all($sql, $params);
     }
 
-    /** Rooms with at least one free bed (scoped to the caller's hostel). */
     /** Room statuses that still accept an application. */
     public const OPEN_STATUSES = ['available', 'reserved'];
+
+    /**
+     * How a room list should be ordered, for an ORDER BY on an `r` alias.
+     *
+     * Plain `ORDER BY room_number` is wrong twice over: it sorts alphabetically,
+     * so FF lands before GF even though Ground comes first, and it sorts the
+     * numbers as text, so GF10 lands before GF2. This ranks the floor prefix in
+     * building order (Ground, First, Second, Top) and the rest numerically.
+     * Anything with an unrecognised prefix sorts last rather than disappearing.
+     */
+    public const ORDER_BY_NUMBER = "
+        IF(FIELD(UPPER(LEFT(r.room_number, 2)), 'GF', 'FF', 'SF', 'TF') = 0, 99,
+           FIELD(UPPER(LEFT(r.room_number, 2)), 'GF', 'FF', 'SF', 'TF')),
+        CAST(NULLIF(REGEXP_REPLACE(r.room_number, '[^0-9]', ''), '') AS UNSIGNED),
+        r.room_number";
 
     /**
      * Why a room cannot be applied for, or null when it can.
@@ -93,6 +107,7 @@ class Room extends Model
         return null;
     }
 
+    /** Rooms with at least one free bed (scoped to the caller's hostel). */
     public function available(): array
     {
         [$scope, $bind] = Scope::on('r.hostel_id');
@@ -100,7 +115,7 @@ class Room extends Model
             "SELECT r.*, h.name AS hostel_name
              FROM rooms r LEFT JOIN hostels h ON h.id = r.hostel_id
              WHERE r.status IN ('available','reserved') AND r.occupied < r.capacity{$scope}
-             ORDER BY h.name, r.room_number",
+             ORDER BY h.name, " . self::ORDER_BY_NUMBER . "",
             $bind
         );
     }
@@ -112,7 +127,7 @@ class Room extends Model
             "SELECT r.*, h.name AS hostel_name
              FROM rooms r LEFT JOIN hostels h ON h.id = r.hostel_id
              WHERE r.hostel_id = ? AND r.status IN ('available','reserved') AND r.occupied < r.capacity
-             ORDER BY r.room_number",
+             ORDER BY " . self::ORDER_BY_NUMBER,
             [$hostelId]
         );
     }

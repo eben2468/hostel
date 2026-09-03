@@ -40,6 +40,19 @@ class AllocationController extends Controller
     {
         $this->requireAuth('admin', 'hostel_admin');
         $preselect = (int) ($_GET['student'] ?? 0);
+        // The room the applicant asked for, carried over from the Applications
+        // page so the reviewer does not have to hunt for it again. Falls back to
+        // the student's own pending application when the link omits it.
+        $preselectRoom = (int) ($_GET['room'] ?? 0);
+        if (!$preselectRoom && $preselect) {
+            $preselectRoom = (int) Database::scalar(
+                "SELECT preferred_room_id FROM applications
+                 WHERE student_id = ? AND preferred_room_id IS NOT NULL
+                 ORDER BY FIELD(status, 'approved', 'pending', 'waiting'), created_at DESC
+                 LIMIT 1",
+                [$preselect]
+            );
+        }
         // Students without an active allocation. A hostel admin may allocate
         // students already in their hostel, or as-yet unassigned applicants
         // (who get bound to this hostel on allocation); the super admin sees all.
@@ -53,10 +66,11 @@ class AllocationController extends Controller
             $studentBind
         );
         $this->view('allocations/form', [
-            'pageTitle' => 'Allocate Room',
-            'students'  => $students,
-            'rooms'     => $this->rooms->available(),
-            'preselect' => $preselect,
+            'pageTitle'     => 'Allocate Room',
+            'students'      => $students,
+            'rooms'         => $this->rooms->available(),
+            'preselect'     => $preselect,
+            'preselectRoom' => $preselectRoom,
         ]);
     }
 
