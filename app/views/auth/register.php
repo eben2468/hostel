@@ -70,6 +70,34 @@
                     </select>
                     <p class="text-xs text-gray-400 mt-1">You'll be a member of this hostel.</p>
                 </div>
+
+                <!-- Next of kin: the hostel office needs someone to reach if the
+                     student cannot be contacted, so both fields are required. -->
+                <div class="sm:col-span-2 pt-1">
+                    <p class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                        <i class="fa-solid fa-user-shield text-primary-500 text-xs"></i>Parent / Guardian
+                    </p>
+                    <p class="text-xs text-gray-400 mt-0.5">Who the hostel should contact about you in an emergency.</p>
+                </div>
+                <div>
+                    <label for="r-gname" class="block text-sm font-medium text-gray-700 mb-1.5">Guardian's Full Name</label>
+                    <input id="r-gname" name="guardian_name" value="<?= old('guardian_name') ?>" required class="ui-input">
+                </div>
+                <div>
+                    <label for="r-gphone" class="block text-sm font-medium text-gray-700 mb-1.5">Guardian's Phone</label>
+                    <input id="r-gphone" name="guardian_phone" value="<?= old('guardian_phone') ?>" required
+                           inputmode="tel" autocomplete="tel" class="ui-input" placeholder="e.g. 0244000000">
+                </div>
+                <div class="sm:col-span-2">
+                    <label for="r-grel" class="block text-sm font-medium text-gray-700 mb-1.5">Relationship <span class="text-gray-400 font-normal">(optional)</span></label>
+                    <select id="r-grel" name="guardian_relationship" class="ui-input">
+                        <option value="">Select relationship</option>
+                        <?php foreach (['Father','Mother','Guardian','Brother','Sister','Uncle','Aunt','Other'] as $rel): ?>
+                            <option value="<?= $rel ?>" <?= old('guardian_relationship')===$rel?'selected':'' ?>><?= $rel ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
                 <div class="sm:col-span-2">
                     <label for="r-pass" class="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
                     <input id="r-pass" type="password" name="password" required autocomplete="new-password" class="ui-input" placeholder="At least <?= MIN_PASSWORD_LENGTH ?> characters">

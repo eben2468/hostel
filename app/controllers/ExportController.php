@@ -14,14 +14,18 @@ class ExportController extends Controller
         $this->requireAuth('admin', 'hostel_admin', 'finance');
         [$scope, $bind] = Scope::on('hostel_id');
         $rows = Database::all(
-            "SELECT student_id, full_name, gender, programme, department, level, phone, email, status
+            "SELECT student_id, full_name, gender, programme, department, level, phone, email,
+                    guardian_name, guardian_phone, guardian_relationship, status
              FROM students WHERE 1{$scope} ORDER BY full_name", $bind
         );
         Audit::log('export', 'students', null, count($rows) . ' rows');
+        // Guardian details ride along so an office can print a contact list.
         Csv::download('students', $rows, [
             'student_id' => 'Student ID', 'full_name' => 'Full Name', 'gender' => 'Gender',
             'programme' => 'Programme', 'department' => 'Department', 'level' => 'Level',
-            'phone' => 'Phone', 'email' => 'Email', 'status' => 'Status',
+            'phone' => 'Phone', 'email' => 'Email',
+            'guardian_name' => 'Guardian', 'guardian_phone' => 'Guardian Phone',
+            'guardian_relationship' => 'Relationship', 'status' => 'Status',
         ]);
     }
 

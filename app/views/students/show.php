@@ -45,7 +45,7 @@ $row = function($label,$value){ echo '<div class="flex justify-between gap-4 py-
                 <?php $row('Gender', ucfirst($student['gender'])); $row('Date of Birth', datef($student['date_of_birth'])); $row('Nationality', $student['nationality']); $row('Programme', $student['programme']); $row('Department', $student['department']); $row('Level', $student['level']); ?>
             </div>
             <div>
-                <?php $row('Phone', $student['phone']); $row('Email', $student['email']); $row('Address', $student['address']); $row('Guardian', $student['guardian_name']); $row('Guardian Phone', $student['guardian_phone']); $row('Blood Group', $student['blood_group']); $row('Emergency', $student['emergency_contact']); ?>
+                <?php $row('Phone', $student['phone']); $row('Email', $student['email']); $row('Address', $student['address']); $row('Guardian', $student['guardian_name']); $row('Guardian Phone', $student['guardian_phone']); $row('Relationship', $student['guardian_relationship']); $row('Blood Group', $student['blood_group']); $row('Emergency', $student['emergency_contact']); ?>
             </div>
         </div>
     </div>

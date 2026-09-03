@@ -84,6 +84,7 @@ $router->post('/hostels/{id}/delete', [HostelController::class, 'destroy']);
 $router->get('/rooms',            [RoomController::class, 'index']);
 $router->get('/rooms/create',     [RoomController::class, 'create']);
 $router->get('/rooms/import',     [RoomController::class, 'importForm']);
+$router->get('/rooms/import/template', [RoomController::class, 'importTemplate']);
 $router->post('/rooms/import',    [RoomController::class, 'import']);
 $router->post('/rooms',           [RoomController::class, 'store']);
 $router->get('/rooms/{id}/edit',  [RoomController::class, 'edit']);

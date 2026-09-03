@@ -57,6 +57,39 @@ class RoomController extends Controller
         ]);
     }
 
+    /**
+     * A ready-made room list to download, edit and upload back.
+     *
+     * Generated rather than shipped as a file, so it is always reachable from
+     * the app itself — including on a live server where dropping a spreadsheet
+     * next to the code is awkward. Excel opens the CSV directly.
+     */
+    public function importTemplate(): void
+    {
+        $this->requireAuth('admin', 'hostel_admin');
+
+        $floors  = ['GF' => 'Ground', 'FF' => 'First', 'SF' => 'Second', 'TF' => 'Top'];
+        $perFloor = max(1, min(500, (int) ($_GET['rooms'] ?? 37)));
+
+        $rows = [];
+        foreach (array_keys($floors) as $code) {
+            for ($i = 1; $i <= $perFloor; $i++) {
+                $rows[] = [
+                    'room_number' => $code . $i,
+                    'floor'       => $code,
+                    'room_type'   => 'quad',
+                    'capacity'    => 4,
+                    'price'       => 0,
+                    'status'      => 'available',
+                ];
+            }
+        }
+        \App\Core\Csv::download('rooms-template', $rows, [
+            'room_number' => 'Room Number', 'floor' => 'Floor', 'room_type' => 'Type',
+            'capacity' => 'Capacity', 'price' => 'Price', 'status' => 'Status',
+        ]);
+    }
+
     /** Create many rooms at once from an uploaded sheet. */
     public function import(): void
     {

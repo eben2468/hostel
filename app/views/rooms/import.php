@@ -24,6 +24,14 @@ $isGlobal = Scope::isGlobal();
         </div>
     <?php endif; ?>
 
+    <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary-200 bg-primary-50 p-4">
+        <div class="text-sm text-primary-800">
+            <p class="font-semibold">Don't have a file yet?</p>
+            <p class="text-primary-700/80 text-xs mt-0.5">Download a ready-made list — GF1–GF37, FF1–FF37, SF1–SF37, TF1–TF37 — edit the Type, Capacity and Price in Excel, then upload it back here.</p>
+        </div>
+        <a href="<?= url('/rooms/import/template') ?>" class="btn btn-ghost shrink-0"><i class="fa-solid fa-download"></i> Download room list</a>
+    </div>
+
     <div>
         <label class="block text-sm font-medium text-gray-600 mb-1">File *</label>
         <input type="file" name="file" required accept=".xlsx,.csv,.txt,.tsv"

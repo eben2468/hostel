@@ -190,6 +190,10 @@ class AuthController extends Controller
             'student_id' => 'Student ID',
             'hostel_id'  => 'Hostel',
             'password'   => 'Password',
+            // Required in the browser too, but re-checked here: the HTML
+            // attribute is trivially bypassed.
+            'guardian_name'  => "Guardian's name",
+            'guardian_phone' => "Guardian's phone",
         ]);
 
         $name      = $this->input('name');
@@ -202,6 +206,9 @@ class AuthController extends Controller
         $programme   = $this->input('programme');
         $department  = $this->input('department');
         $level       = $this->input('level');
+        $guardianName  = $this->input('guardian_name');
+        $guardianPhone = $this->input('guardian_phone');
+        $guardianRel   = $this->input('guardian_relationship');
         $password  = $_POST['password'] ?? '';
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -231,9 +238,11 @@ class AuthController extends Controller
             [$name, $studentId, $email, $phone, Auth::hash($password), $hostelId]
         );
         Database::insert(
-            "INSERT INTO students (user_id, hostel_id, student_id, full_name, gender, phone, email, nationality, programme, department, level, status)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?, 'active')",
-            [$userId, $hostelId, $studentId, $name, $gender, $phone, $email, $nationality, $programme, $department, $level]
+            "INSERT INTO students (user_id, hostel_id, student_id, full_name, gender, phone, email, nationality,
+                                   programme, department, level, guardian_name, guardian_phone, guardian_relationship, status)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'active')",
+            [$userId, $hostelId, $studentId, $name, $gender, $phone, $email, $nationality,
+             $programme, $department, $level, $guardianName, $guardianPhone, $guardianRel ?: null]
         );
 
         Session::forget('_old');
