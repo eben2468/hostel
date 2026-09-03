@@ -19,9 +19,20 @@
                     <label for="r-name" class="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
                     <input id="r-name" name="name" value="<?= old('name') ?>" required autocomplete="name" class="ui-input">
                 </div>
-                <div>
+                <div x-data="{ sid: '<?= old('student_id') ?>' }">
                     <label for="r-sid" class="block text-sm font-medium text-gray-700 mb-1.5">Student ID</label>
-                    <input id="r-sid" name="student_id" value="<?= old('student_id') ?>" required class="ui-input">
+                    <input id="r-sid" name="student_id" x-model="sid" @input="sid = sid.toUpperCase()"
+                           required minlength="13" maxlength="13"
+                           pattern="[0-9]{3}[A-Za-z]{2,4}[0-9]{6,8}"
+                           title="13 characters: 3 digits, then letters, then digits — e.g. 226AB01234567"
+                           placeholder="e.g. 226AB01234567"
+                           autocomplete="off" spellcheck="false" class="ui-input tnum uppercase">
+                    <!-- A live count, because the rule people get wrong is the length. -->
+                    <p class="text-xs mt-1 flex items-center gap-1.5"
+                       :class="sid.length === 13 ? 'text-green-600' : 'text-gray-400'">
+                        <i class="fa-solid text-[10px]" :class="sid.length === 13 ? 'fa-circle-check' : 'fa-circle-info'"></i>
+                        <span><span x-text="sid.length">0</span> of 13 characters — exactly as printed on your student card.</span>
+                    </p>
                 </div>
                 <div>
                     <label for="r-gender" class="block text-sm font-medium text-gray-700 mb-1.5">Gender</label>

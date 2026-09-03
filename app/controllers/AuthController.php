@@ -198,7 +198,9 @@ class AuthController extends Controller
 
         $name      = $this->input('name');
         $email     = $this->input('email');
-        $studentId = $this->input('student_id');
+        // Normalise before checking or storing: pasted IDs pick up stray spaces
+        // and dashes, and the institution writes them in upper case.
+        $studentId = strtoupper(preg_replace('/[\s\-]/', '', (string) $this->input('student_id')));
         $phone     = $this->input('phone');
         $gender    = $this->input('gender', 'male');
         $hostelId  = (int) $this->input('hostel_id');
@@ -213,6 +215,19 @@ class AuthController extends Controller
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $errors['email'] = 'A valid email is required.';
+        }
+        // The ID is 13 characters: a 3-digit intake year, the programme letters,
+        // then the serial — e.g. 226AB01234567. Length is reported separately
+        // from shape so the student can see which one they got wrong. The letter
+        // block allows 2-4 because real IDs use both 2 and 3.
+        if ($studentId !== '') {
+            if (strlen($studentId) !== 13) {
+                $errors['student_id'] = 'Student ID must be exactly 13 characters — you entered '
+                    . strlen($studentId) . '. Check it against your student card.';
+            } elseif (!preg_match('/^[0-9]{3}[A-Z]{2,4}[0-9]{6,8}$/', $studentId)) {
+                $errors['student_id'] = 'That Student ID does not look right. It should be 3 digits, '
+                    . 'then letters, then digits — for example 226AB01234567.';
+            }
         }
         if (strlen($password) < MIN_PASSWORD_LENGTH) {
             $errors['password'] = 'Password must be at least ' . MIN_PASSWORD_LENGTH . ' characters.';
