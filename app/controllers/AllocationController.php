@@ -10,6 +10,7 @@ use App\Core\Database;
 use App\Core\Scope;
 use App\Models\Allocation;
 use App\Models\Room;
+use App\Models\Hostel;
 use App\Models\Invoice;
 use App\Models\Student;
 use App\Services\Notify;
@@ -28,11 +29,20 @@ class AllocationController extends Controller
     public function index(): void
     {
         $this->requireAuth('admin', 'hostel_admin');
-        $pager = $this->alloc->paginatedDetailed(\App\Core\Paginator::currentPage());
+        $filters = [
+            'q'      => trim($_GET['q'] ?? ''),
+            'status' => trim($_GET['status'] ?? ''),
+            'hostel' => trim($_GET['hostel'] ?? ''),
+            'sort'   => trim($_GET['sort'] ?? ''),
+        ];
+        $pager = $this->alloc->paginatedDetailed(\App\Core\Paginator::currentPage(), 15, $filters);
         $this->view('allocations/index', [
             'pageTitle'   => 'Allocations',
             'allocations' => $pager['rows'],
             'pager'       => $pager,
+            'filters'     => $filters,
+            // Only the super admin spans hostels, so only they get the picker.
+            'hostels'     => Scope::isGlobal() ? (new Hostel())->all('name') : null,
         ]);
     }
 

@@ -374,6 +374,61 @@ class ApplicationController extends Controller
         $this->redirect('/applications');
     }
 
+    /**
+     * Rejected applications, kept together so a decision can be undone.
+     *
+     * Rejecting is a judgment call made under time pressure, and the student's
+     * record is not deleted by it — this is where an admin finds it again.
+     */
+    public function rejected(): void
+    {
+        $this->requireAuth('admin', 'hostel_admin');
+        $q = trim($_GET['q'] ?? '');
+        $pager = $this->apps->paginatedWithStudent(
+            ['status' => 'rejected', 'q' => $q],
+            \App\Core\Paginator::currentPage()
+        );
+        $this->view('applications/rejected', [
+            'pageTitle'    => 'Rejected Applications',
+            'applications' => $pager['rows'],
+            'pager'        => $pager,
+            'q'            => $q,
+        ]);
+    }
+
+    /**
+     * Undo a rejection: the application goes back to pending so it can be
+     * reviewed again, and the old rejection note is cleared so the student is
+     * not left reading a reason that no longer applies.
+     */
+    public function restore($id): void
+    {
+        $this->requireAuth('admin', 'hostel_admin');
+        Csrf::check();
+        $app = $this->apps->find($id);
+        if (!$app) {
+            $this->redirect('/applications/rejected');
+        }
+        $this->guardHostel($app['preferred_hostel_id'] !== null ? (int) $app['preferred_hostel_id'] : null);
+
+        if ($app['status'] !== 'rejected') {
+            Session::flash('error', 'That application is not rejected, so there is nothing to undo.');
+            $this->redirect('/applications/rejected');
+        }
+
+        Database::run(
+            "UPDATE applications SET status='pending', review_note=NULL, reviewed_by=?, reviewed_at=NOW() WHERE id=?",
+            [Auth::id(), $id]
+        );
+        Audit::log('update', 'applications', $id, 'restored from rejected to pending');
+        Notify::student((int) $app['student_id'], 'Application reopened',
+            'Your hostel application has been reopened and is being reviewed again.',
+            '/applications', 'fa-rotate-left');
+
+        Session::flash('success', 'Application restored to pending — it is back on the Applications page for review.');
+        $this->redirect('/applications/rejected');
+    }
+
     private function setStatus($id, string $status, string $message, ?string $note = null): void
     {
         $this->requireAuth('admin', 'hostel_admin');

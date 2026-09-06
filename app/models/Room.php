@@ -132,6 +132,30 @@ class Room extends Model
         );
     }
 
+    /**
+     * Who is currently living in a room, with enough of each profile to be
+     * useful at a glance — contact details, programme, bed and guardian.
+     *
+     * Ordered by bed so the list reads the way the room is laid out.
+     */
+    public function occupants(int $roomId): array
+    {
+        return Database::all(
+            "SELECT s.id, s.student_id, s.full_name, s.gender, s.photo, s.phone, s.email,
+                    s.programme, s.department, s.level, s.status AS student_status,
+                    s.guardian_name, s.guardian_phone,
+                    a.id AS allocation_id, a.status AS allocation_status,
+                    a.check_in_at, a.created_at AS allocated_at,
+                    b.bed_number
+             FROM allocations a
+             JOIN students s ON s.id = a.student_id
+             LEFT JOIN beds b ON b.id = a.bed_id
+             WHERE a.room_id = ? AND a.status IN ('active','checked_in')
+             ORDER BY b.bed_number, s.full_name",
+            [$roomId]
+        );
+    }
+
     /** Recalculate occupied count and status from active allocations. */
     public function syncOccupancy(int $roomId): void
     {

@@ -1,14 +1,31 @@
-<?php /** @var array $student */
+<?php /** @var array $student @var ?array $account */
 use App\Core\Auth;
 $canManage = Auth::hasRole('admin', 'hostel_admin');
+$account = $account ?? null;   // null when the student has no login account
 $row = function($label,$value){ echo '<div class="flex justify-between gap-4 py-2.5 border-b border-gray-100 last:border-0"><span class="text-sm text-gray-500">'.$label.'</span><span class="text-sm font-medium text-gray-700 text-right">'.e($value ?: '—').'</span></div>'; };
 ?>
 <div class="flex items-center justify-between mb-4">
     <a href="<?= url('/students') ?>" class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary-600 transition"><i class="fa-solid fa-arrow-left"></i>Back</a>
     <?php if ($canManage): ?>
-        <div class="flex gap-2">
+        <div class="flex flex-wrap gap-2">
             <a href="<?= url('/students/'.$student['id'].'/statement') ?>" class="btn bg-green-600 hover:bg-green-700 text-white"><i class="fa-solid fa-file-pdf"></i>Statement</a>
             <a href="<?= url('/students/'.$student['id'].'/edit') ?>" class="btn bg-amber-500 hover:bg-amber-600 text-white"><i class="fa-solid fa-pen"></i>Edit</a>
+
+            <?php if (Auth::hasRole('admin','hostel_admin') && $account !== null): ?>
+                <?php $isActive = (int) $account['is_active'] === 1; ?>
+                <form method="post" action="<?= url('/students/'.$student['id'].'/account') ?>"
+                      onsubmit="return confirm('<?= $isActive
+                          ? 'Deactivate this account? They will not be able to sign in. Their records are kept.'
+                          : 'Reactivate this account so they can sign in again?' ?>')">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="<?= $isActive ? 'deactivate' : 'activate' ?>">
+                    <button class="btn <?= $isActive
+                        ? 'bg-gray-600 hover:bg-gray-700' : 'bg-emerald-600 hover:bg-emerald-700' ?> text-white">
+                        <i class="fa-solid <?= $isActive ? 'fa-user-slash' : 'fa-user-check' ?>"></i><?= $isActive ? 'Deactivate' : 'Reactivate' ?>
+                    </button>
+                </form>
+            <?php endif; ?>
+
             <?php if (Auth::hasRole('admin')): ?>
             <form method="post" action="<?= url('/students/'.$student['id'].'/delete') ?>" onsubmit="return confirm('Delete this student?')">
                 <?= csrf_field() ?>
@@ -45,7 +62,10 @@ $row = function($label,$value){ echo '<div class="flex justify-between gap-4 py-
                 <?php $row('Gender', ucfirst($student['gender'])); $row('Date of Birth', datef($student['date_of_birth'])); $row('Nationality', $student['nationality']); $row('Programme', $student['programme']); $row('Department', $student['department']); $row('Level', $student['level']); ?>
             </div>
             <div>
-                <?php $row('Phone', $student['phone']); $row('Email', $student['email']); $row('Address', $student['address']); $row('Guardian', $student['guardian_name']); $row('Guardian Phone', $student['guardian_phone']); $row('Relationship', $student['guardian_relationship']); $row('Blood Group', $student['blood_group']); $row('Emergency', $student['emergency_contact']); ?>
+                <?php $row('Phone', $student['phone']); $row('Email', $student['email']); $row('Address', $student['address']); $row('Guardian', $student['guardian_name']); $row('Guardian Phone', $student['guardian_phone']); $row('Relationship', $student['guardian_relationship']);
+$row('Login account', $account === null
+    ? 'No account'
+    : ((int) $account['is_active'] === 1 ? 'Active' : 'Deactivated — cannot sign in')); $row('Blood Group', $student['blood_group']); $row('Emergency', $student['emergency_contact']); ?>
             </div>
         </div>
     </div>

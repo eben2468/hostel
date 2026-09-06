@@ -71,6 +71,7 @@ $router->get('/students/{id}/edit',  [StudentController::class, 'edit']);
 $router->get('/students/{id}/statement', [StudentController::class, 'statement']);
 $router->post('/students/{id}',      [StudentController::class, 'update']);
 $router->post('/students/{id}/delete', [StudentController::class, 'destroy']);
+$router->post('/students/{id}/account', [StudentController::class, 'toggleActive']);
 
 // --- Hostels & Rooms --------------------------------------------------------
 $router->get('/hostels',            [HostelController::class, 'index']);
@@ -87,6 +88,7 @@ $router->get('/rooms/import',     [RoomController::class, 'importForm']);
 $router->get('/rooms/import/template', [RoomController::class, 'importTemplate']);
 $router->post('/rooms/import',    [RoomController::class, 'import']);
 $router->post('/rooms',           [RoomController::class, 'store']);
+$router->get('/rooms/{id}',       [RoomController::class, 'show']);
 $router->get('/rooms/{id}/edit',  [RoomController::class, 'edit']);
 $router->post('/rooms/{id}',      [RoomController::class, 'update']);
 $router->post('/rooms/{id}/delete', [RoomController::class, 'destroy']);
@@ -95,12 +97,14 @@ $router->post('/rooms/{id}/delete', [RoomController::class, 'destroy']);
 $router->get('/applications',            [ApplicationController::class, 'index']);
 $router->post('/applications/toggle',    [ApplicationController::class, 'toggleOpen']);
 $router->get('/applications/create',     [ApplicationController::class, 'create']);
+$router->get('/applications/rejected',   [ApplicationController::class, 'rejected']);
 $router->post('/applications',           [ApplicationController::class, 'store']);
 $router->post('/applications/{id}/approve', [ApplicationController::class, 'approve']);
 $router->post('/applications/{id}/reject',  [ApplicationController::class, 'reject']);
 $router->post('/applications/{id}/waiting', [ApplicationController::class, 'waiting']);
 $router->post('/applications/{id}/cancel',  [ApplicationController::class, 'cancel']);
 $router->post('/applications/{id}/verify-payment', [ApplicationController::class, 'verifyPayment']);
+$router->post('/applications/{id}/restore', [ApplicationController::class, 'restore']);
 
 // --- Allocations ------------------------------------------------------------
 $router->get('/allocations',            [AllocationController::class, 'index']);

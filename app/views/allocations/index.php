@@ -1,8 +1,62 @@
-<?php /** @var array $allocations */ ?>
-<div class="flex items-center justify-between mb-4">
-    <p class="text-sm text-gray-500"><span class="font-semibold text-gray-700"><?= count($allocations) ?></span> allocation(s)</p>
+<?php /** @var array $allocations @var array $filters @var ?array $hostels @var array $pager */
+$filters = $filters ?? ['q' => '', 'status' => '', 'hostel' => '', 'sort' => ''];
+$hostels = $hostels ?? null;   // null = hostel-bound admin, no hostel picker
+$hasFilters = trim($filters['q'] . $filters['status'] . $filters['hostel']) !== '';
+?>
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+    <p class="text-sm text-gray-500">
+        <span class="font-semibold text-gray-700"><?= (int) ($pager['total'] ?? count($allocations)) ?></span>
+        allocation(s)<?= $hasFilters ? ' <span class="text-gray-400">found</span>' : '' ?>
+    </p>
     <a href="<?= url('/allocations/create') ?>" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Allocate Room</a>
 </div>
+
+<!-- Filters. A GET form, so a result set is a shareable URL and the pager
+     carries the filters across pages. -->
+<form method="get" action="<?= url('/allocations') ?>" class="ui-card p-3 mb-4 flex flex-wrap items-end gap-3" data-reveal="0">
+    <div class="flex-1 min-w-[13rem]">
+        <label class="block text-[11px] font-medium text-gray-500 mb-1">Search</label>
+        <div class="relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
+            <input name="q" value="<?= e($filters['q']) ?>" class="ui-input pl-8" placeholder="Student, ID, room, bed…">
+        </div>
+    </div>
+
+    <div class="min-w-[9rem]">
+        <label class="block text-[11px] font-medium text-gray-500 mb-1">Status</label>
+        <select name="status" class="ui-input" onchange="this.form.submit()">
+            <option value="">All</option>
+            <?php foreach (['active' => 'Active', 'checked_in' => 'Checked in', 'checked_out' => 'Checked out', 'cancelled' => 'Cancelled'] as $v => $label): ?>
+                <option value="<?= $v ?>" <?= $filters['status'] === $v ? 'selected' : '' ?>><?= $label ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+
+    <?php if ($hostels !== null): ?>
+        <div class="min-w-[10rem]">
+            <label class="block text-[11px] font-medium text-gray-500 mb-1">Hostel</label>
+            <select name="hostel" class="ui-input" onchange="this.form.submit()">
+                <option value="">All hostels</option>
+                <?php foreach ($hostels as $h): ?>
+                    <option value="<?= (int) $h['id'] ?>" <?= $filters['hostel'] === (string) $h['id'] ? 'selected' : '' ?>><?= e($h['name']) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+    <?php endif; ?>
+
+    <div class="min-w-[9rem]">
+        <label class="block text-[11px] font-medium text-gray-500 mb-1">Sort</label>
+        <select name="sort" class="ui-input" onchange="this.form.submit()">
+            <option value="">Room order</option>
+            <option value="newest" <?= $filters['sort'] === 'newest' ? 'selected' : '' ?>>Newest first</option>
+        </select>
+    </div>
+
+    <button class="btn btn-ghost"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
+    <?php if ($hasFilters || $filters['sort'] !== ''): ?>
+        <a href="<?= url('/allocations') ?>" class="btn btn-ghost border-transparent text-gray-500 hover:text-red-600"><i class="fa-solid fa-xmark"></i> Clear</a>
+    <?php endif; ?>
+</form>
 <div class="ui-card overflow-hidden" data-reveal="0">
     <div class="overflow-x-auto">
         <table class="w-full text-sm ui-table">

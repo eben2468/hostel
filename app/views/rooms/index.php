@@ -97,7 +97,15 @@ $statuses  = ['available','occupied','reserved','maintenance','closed'];
                 </td></tr><?php endif; ?>
                 <?php foreach ($rooms as $r): $pct = (int)$r['capacity']>0?round($r['occupied']/$r['capacity']*100):0; ?>
                     <tr>
-                        <td class="px-4 py-3 font-medium text-gray-700"><?= e($r['room_number']) ?></td>
+                        <td class="px-4 py-3">
+                            <a href="<?= url('/rooms/' . $r['id']) ?>" class="font-medium text-gray-700 hover:text-primary-600 hover:underline inline-flex items-center gap-1.5"
+                               title="View the students in this room">
+                                <?= e($r['room_number']) ?>
+                                <?php if ((int) $r['occupied'] > 0): ?>
+                                    <span class="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500"><i class="fa-solid fa-user text-[8px]"></i> <?= (int) $r['occupied'] ?></span>
+                                <?php endif; ?>
+                            </a>
+                        </td>
                         <td class="px-4 py-3 text-gray-500"><?= e($r['hostel_name'] ?? '—') ?></td>
                         <td class="px-4 py-3 text-gray-500"><?= ucfirst($r['room_type']) ?></td>
                         <td class="px-4 py-3">

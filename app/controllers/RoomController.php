@@ -48,6 +48,31 @@ class RoomController extends Controller
         ]);
     }
 
+    /** One room, with the students currently living in it. */
+    public function show($id): void
+    {
+        $this->requireAuth('admin', 'hostel_admin');
+        $room = Database::first(
+            "SELECT r.*, h.name AS hostel_name, f.number AS floor_number, bl.name AS block_name
+             FROM rooms r
+             LEFT JOIN hostels h ON h.id = r.hostel_id
+             LEFT JOIN floors f  ON f.id = r.floor_id
+             LEFT JOIN blocks bl ON bl.id = f.block_id
+             WHERE r.id = ?",
+            [$id]
+        );
+        if (!$room) {
+            $this->redirect('/rooms');
+        }
+        $this->guardHostel((int) $room['hostel_id']);
+
+        $this->view('rooms/show', [
+            'pageTitle' => 'Room ' . $room['room_number'],
+            'room'      => $room,
+            'occupants' => $this->rooms->occupants((int) $id),
+        ]);
+    }
+
     public function importForm(): void
     {
         $this->requireAuth('admin', 'hostel_admin');

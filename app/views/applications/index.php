@@ -44,6 +44,7 @@ $colspan = $isStudent ? 7 : 8;
     </div>
     <div class="flex flex-wrap gap-2">
         <?php if (Auth::hasRole('admin','hostel_admin')): ?>
+            <a href="<?= url('/applications/rejected') ?>" class="btn btn-ghost"><i class="fa-solid fa-rotate-left"></i> Rejected</a>
             <a href="<?= url('/fees') ?>" class="btn btn-ghost"><i class="fa-solid fa-hand-holding-dollar"></i> Hall Dues Setup</a>
         <?php endif; ?>
         <?php if ($isStudent && $arrears): ?>

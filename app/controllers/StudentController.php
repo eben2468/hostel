@@ -6,6 +6,7 @@ use App\Core\Csrf;
 use App\Core\Session;
 use App\Core\Audit;
 use App\Core\Scope;
+use App\Core\Database;
 use App\Models\Student;
 use App\Models\Hostel;
 
@@ -74,7 +75,51 @@ class StudentController extends Controller
             $this->notFound();
         }
         $this->guardHostel($student['hostel_id'] !== null ? (int) $student['hostel_id'] : null);
-        $this->view('students/show', ['pageTitle' => $student['full_name'], 'student' => $student]);
+        $this->view('students/show', [
+            'pageTitle' => $student['full_name'],
+            'student'   => $student,
+            // The login account behind the record, so the page can show whether
+            // they can still sign in (a student may have no account at all).
+            'account'   => $student['user_id']
+                ? Database::first("SELECT id, email, is_active FROM users WHERE id = ?", [$student['user_id']])
+                : null,
+        ]);
+    }
+
+    /**
+     * Turn a student's login access on or off.
+     *
+     * Deactivating flips both halves so they cannot drift apart: `users.is_active`
+     * is what the login check reads, and `students.status` is what the rest of
+     * the app displays. The record itself is untouched — allocations, invoices
+     * and history all stay put, unlike Delete.
+     */
+    public function toggleActive($id): void
+    {
+        $this->requireAuth('admin', 'hostel_admin');
+        Csrf::check();
+        $student = $this->students->find($id);
+        if (!$student) {
+            $this->notFound();
+        }
+        $this->guardHostel($student['hostel_id'] !== null ? (int) $student['hostel_id'] : null);
+
+        $activate = $this->input('action') === 'activate';
+
+        if (empty($student['user_id'])) {
+            Session::flash('error', 'This student has no login account, so there is nothing to '
+                . ($activate ? 'activate' : 'deactivate') . '.');
+            $this->redirect('/students/' . $id);
+        }
+
+        Database::run("UPDATE users SET is_active = ? WHERE id = ?", [$activate ? 1 : 0, $student['user_id']]);
+        Database::run("UPDATE students SET status = ? WHERE id = ?", [$activate ? 'active' : 'inactive', $id]);
+
+        Audit::log('update', 'students', $id, $activate ? 'account activated' : 'account deactivated');
+        Session::flash('success', $activate
+            ? e($student['full_name']) . " can sign in again."
+            : e($student['full_name']) . " has been deactivated and can no longer sign in. Their records are kept.");
+        $this->redirect('/students/' . $id);
     }
 
     public function edit($id): void
