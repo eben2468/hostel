@@ -109,10 +109,20 @@ $statuses  = ['available','occupied','reserved','maintenance','closed'];
                         <td class="px-4 py-3 text-gray-500"><?= e($r['hostel_name'] ?? '—') ?></td>
                         <td class="px-4 py-3 text-gray-500"><?= ucfirst($r['room_type']) ?></td>
                         <td class="px-4 py-3">
+                            <?php
+                            $claimed = (int) ($r['claimed'] ?? 0);
+                            $taken   = (int) $r['occupied'] + $claimed;
+                            ?>
                             <div class="flex items-center gap-2">
                                 <div class="w-16 bar-track h-1.5"><div class="bar-fill" data-width="<?= $pct ?>" style="width:0"></div></div>
                                 <span class="text-xs text-gray-500 tnum"><?= (int)$r['occupied'] ?>/<?= (int)$r['capacity'] ?></span>
                             </div>
+                            <?php if ($claimed > 0): ?>
+                                <p class="mt-1 text-[11px] <?= $taken >= (int) $r['capacity'] ? 'text-amber-600 font-semibold' : 'text-gray-400' ?>">
+                                    <i class="fa-solid fa-hourglass-half text-[9px]"></i>
+                                    <?= $claimed ?> applied<?= $taken >= (int) $r['capacity'] ? ' · no beds left' : '' ?>
+                                </p>
+                            <?php endif; ?>
                         </td>
                         <td class="px-4 py-3 tnum text-gray-700"><?= money($r['price']) ?></td>
                         <td class="px-4 py-3"><?= status_badge($r['status']) ?></td>

@@ -98,7 +98,9 @@ class ApplicationController extends Controller
                 Session::flash('error', $this->arrearsMessage($arrears));
                 $this->redirect('/applications');
             }
-            $preferredRooms = (new Room())->availableForHostel((int) $me['hostel_id']);
+            // Their own live application must not count against them, or a
+            // student revisiting the form would find their own room missing.
+            $preferredRooms = (new Room())->availableForHostel((int) $me['hostel_id'], (int) $me['id']);
             // The dues notice + account the student must pay into before applying.
             $dues = (new Hostel())->dues((int) $me['hostel_id']);
             $studentType = Student::typeFor($me);
@@ -165,11 +167,15 @@ class ApplicationController extends Controller
             $room = null; $roomId = null;
         }
 
-        // The room may have filled up between opening the form and submitting it.
-        // Send the student back with their answers intact so they only have to
-        // change the room; staff are told, but their application still goes in
-        // with the preference cleared.
-        if ($room && ($full = Room::unavailableReason($room)) !== null) {
+        // The room may have been taken between opening the form and submitting
+        // it — by an allocation, or by other students applying for its last
+        // beds. Send the student back with their answers intact so they only
+        // have to change the room; staff are told, but their application still
+        // goes in with the preference cleared.
+        // The student's own application is excluded so re-submitting is not
+        // blocked by the claim they themselves already hold.
+        $roomClaims = $room ? Room::claims((int) $room['id'], $studentId) : 0;
+        if ($room && ($full = Room::unavailableReason($room, $roomClaims)) !== null) {
             if (Auth::hasRole('student')) {
                 Session::set('_old', $_POST);
                 Session::flash('error', $full);
@@ -207,7 +213,7 @@ class ApplicationController extends Controller
             $this->redirect('/applications/create');
         }
 
-        $id = $this->apps->create([
+        $attributes = [
             'student_id'          => $studentId,
             'academic_year'       => $settings['academic_year'] ?? null,
             'semester'            => $settings['semester'] ?? null,
@@ -222,7 +228,23 @@ class ApplicationController extends Controller
             'payment_amount'      => Hostel::duesAmountFor($dues, $studentType),
             'payment_status'      => 'unverified',
             'status'              => 'pending',
-        ]);
+        ];
+
+        if ($roomId === null) {
+            $id = $this->apps->create($attributes);
+        } else {
+            // Counting the beds and then taking one must be one atomic step, or
+            // two students submitting for the same last bed both pass the check
+            // and both get in. Locking the room row serialises them, so the
+            // second one re-counts after the first has committed.
+            $id = $this->claimBed((int) $roomId, $studentId, $attributes, $room);
+            if ($id === null) {
+                Session::set('_old', $_POST);
+                Session::flash('error', Room::unavailableReason($room, Room::claims((int) $roomId, $studentId))
+                    ?? 'That room was taken while you were submitting. Please choose a different room.');
+                $this->redirect('/applications/create');
+            }
+        }
         Audit::log('create', 'applications', $id);
         Notify::toRole(['admin', 'hostel_admin'], 'New hostel application',
             $reference
@@ -372,6 +394,47 @@ class ApplicationController extends Controller
             Session::flash('success', 'Payment check reset to unverified.');
         }
         $this->redirect('/applications');
+    }
+
+    /**
+     * Insert an application that claims a bed, under a row lock on the room.
+     *
+     * The room row is locked first so concurrent applicants for the same room
+     * queue behind each other; each then re-counts the live claims with the
+     * earlier one already committed. Staff are allowed through with the
+     * preference cleared rather than being blocked outright.
+     *
+     * @return int|null the new application id, or null when the room filled up
+     */
+    private function claimBed(int $roomId, int $studentId, array $attributes, array $room): ?int
+    {
+        $pdo = Database::pdo();
+        $pdo->beginTransaction();
+        try {
+            // Locks this room's row for the duration of the transaction.
+            $locked = Database::first("SELECT id, capacity, occupied FROM rooms WHERE id = ? FOR UPDATE", [$roomId]);
+            if (!$locked) {
+                $pdo->rollBack();
+                return null;
+            }
+            $claims = Room::claims($roomId, $studentId);
+            if ((int) $locked['occupied'] + $claims >= (int) $locked['capacity']) {
+                if (Auth::hasRole('student')) {
+                    $pdo->rollBack();
+                    return null;
+                }
+                // Staff keep the application; only the preference is dropped.
+                $attributes['preferred_room_id'] = null;
+            }
+            $id = $this->apps->create($attributes);
+            $pdo->commit();
+            return $id;
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
     }
 
     /**

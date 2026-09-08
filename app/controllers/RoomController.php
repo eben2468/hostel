@@ -67,9 +67,12 @@ class RoomController extends Controller
         $this->guardHostel((int) $room['hostel_id']);
 
         $this->view('rooms/show', [
-            'pageTitle' => 'Room ' . $room['room_number'],
-            'room'      => $room,
-            'occupants' => $this->rooms->occupants((int) $id),
+            'pageTitle'  => 'Room ' . $room['room_number'],
+            'room'       => $room,
+            'occupants'  => $this->rooms->occupants((int) $id),
+            // Live applications holding the remaining beds — why the room may
+            // be closed to new applicants while it still looks half empty.
+            'applicants' => $this->rooms->applicants((int) $id),
         ]);
     }
 

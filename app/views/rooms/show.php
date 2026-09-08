@@ -1,5 +1,9 @@
-<?php /** @var array $room @var array $occupants */
-$free = max(0, (int) $room['capacity'] - (int) $room['occupied']);
+<?php /** @var array $room @var array $occupants @var array $applicants */
+$applicants = $applicants ?? [];
+$free       = max(0, (int) $room['capacity'] - (int) $room['occupied']);
+// Beds physically free but already spoken for by applications awaiting review.
+$claimed    = count($applicants);
+$openToApply = max(0, $free - $claimed);
 $statusPill = [
     'available'   => 'bg-green-100 text-green-700',
     'occupied'    => 'bg-blue-100 text-blue-700',
@@ -33,8 +37,8 @@ $statusPill = [
     <div class="grid grid-cols-2 lg:grid-cols-4 divide-x divide-gray-100 border-b border-gray-100">
         <?php foreach ([
             ['Occupied', (int) $room['occupied'] . ' / ' . (int) $room['capacity'], 'fa-users'],
-            ['Free beds', (string) $free, 'fa-bed'],
-            ['Room fee',  money($room['price']), 'fa-tag'],
+            ['Free beds', $free . ($claimed ? ' (' . $claimed . ' applied for)' : ''), 'fa-bed'],
+            ['Open to apply', (string) $openToApply, 'fa-door-open'],
         ] as [$label, $value, $icon]): ?>
             <div class="p-4">
                 <p class="text-[11px] uppercase tracking-wider text-gray-400 font-semibold flex items-center gap-1.5">
@@ -61,6 +65,19 @@ $statusPill = [
         <a href="<?= url('/allocations/create?room=' . $room['id']) ?>" class="btn btn-ghost"><i class="fa-solid fa-user-plus"></i> Allocate a student</a>
     <?php endif; ?>
 </div>
+
+<?php if ($openToApply === 0 && $claimed > 0): ?>
+    <div class="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
+        <i class="fa-solid fa-lock mt-0.5 text-amber-500"></i>
+        <div class="text-sm">
+            <p class="font-semibold">Closed to new applications</p>
+            <p class="text-amber-700/80">
+                Every bed is either occupied or already applied for, so students can no longer pick this room.
+                Beds are released automatically if you reject or cancel one of the applications below.
+            </p>
+        </div>
+    </div>
+<?php endif; ?>
 
 <?php if (!$occupants): ?>
     <div class="ui-card p-10 text-center" data-reveal="1">
@@ -125,5 +142,50 @@ $statusPill = [
                 </div>
             </div>
         <?php endforeach; ?>
+    </div>
+<?php endif; ?>
+
+<!-- Applicants holding the remaining beds -->
+<?php if ($applicants): ?>
+    <h3 class="font-display font-bold text-gray-800 flex items-center gap-2 mt-6 mb-3">
+        <i class="fa-solid fa-hourglass-half text-amber-500 text-sm"></i>
+        Applied for this room, awaiting a decision
+        <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700"><?= count($applicants) ?></span>
+    </h3>
+    <div class="ui-card overflow-hidden" data-reveal="0">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm ui-table">
+                <thead class="text-gray-500 text-left text-xs uppercase tracking-wide">
+                    <tr>
+                        <th class="px-4 py-3 font-semibold">Student</th>
+                        <th class="px-4 py-3 font-semibold">Level / Programme</th>
+                        <th class="px-4 py-3 font-semibold">Dues reference</th>
+                        <th class="px-4 py-3 font-semibold">Applied</th>
+                        <th class="px-4 py-3 font-semibold">Status</th>
+                        <th class="px-4 py-3 font-semibold text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    <?php foreach ($applicants as $ap): ?>
+                        <tr>
+                            <td class="px-4 py-3">
+                                <a href="<?= url('/students/' . $ap['id']) ?>" class="font-medium text-gray-700 hover:text-primary-600"><?= e($ap['full_name']) ?></a>
+                                <p class="text-xs text-gray-400 tnum"><?= e($ap['student_id']) ?><?= $ap['phone'] ? ' · ' . e($ap['phone']) : '' ?></p>
+                            </td>
+                            <td class="px-4 py-3 text-gray-500"><?= e(trim(($ap['level'] ? 'Level ' . $ap['level'] : '') . ' ' . ($ap['programme'] ?? ''))) ?: '—' ?></td>
+                            <td class="px-4 py-3 text-gray-500 tnum"><?= e($ap['payment_reference'] ?: '—') ?></td>
+                            <td class="px-4 py-3 text-gray-500 whitespace-nowrap"><?= datef($ap['applied_at'], 'd M Y') ?></td>
+                            <td class="px-4 py-3"><?= status_badge($ap['application_status']) ?></td>
+                            <td class="px-4 py-3 text-right">
+                                <a href="<?= url('/applications?q=' . urlencode((string) $ap['student_id'])) ?>"
+                                   class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-500 hover:bg-primary-50 hover:text-primary-700 transition">
+                                    <i class="fa-solid fa-arrow-right"></i>Review
+                                </a>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
     </div>
 <?php endif; ?>
