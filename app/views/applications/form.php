@@ -7,7 +7,19 @@ $preferredRooms = $preferredRooms ?? [];
 $dues = $dues ?? [];
 // The panel highlights the card matching the applicant's category.
 $duesStudentType = $studentType ?? null;
-$refRequired = !$isStaff && Hostel::duesReferenceRequired($dues);
+// Students must always supply the reference; staff may fill it in later, once
+// the student produces their receipt.
+$refRequired = !$isStaff;
+
+// Searchable student list for the staff picker. Name, ID and programme are all
+// searchable, so a hall admin can find someone by whichever they have to hand.
+$studentList = $isStaff ? array_map(fn($s) => [
+    'id'    => (int) $s['id'],
+    'label' => $s['full_name'] . ' (' . $s['student_id'] . ')'
+             . (!empty($s['level']) ? ' · L' . $s['level'] : ''),
+    'find'  => strtolower(trim($s['full_name'] . ' ' . $s['student_id'] . ' '
+             . ($s['programme'] ?? '') . ' ' . ($s['department'] ?? ''))),
+], $students) : [];
 // Room data for the client-side "filter by room type" dropdown.
 $roomData = array_map(fn($r) => [
     'id'    => (int) $r['id'],
@@ -30,13 +42,36 @@ $roomData = array_map(fn($r) => [
                   only costs them the room itself, not the rest of the form. */ ?>
          x-data="{ roomType: '<?= old('preferred_room_type') ?>', rooms: <?= htmlspecialchars(json_encode($roomData), ENT_QUOTES) ?> }">
         <?php if ($isStaff): ?>
-            <div class="sm:col-span-2"><label class="block text-sm font-medium text-gray-600 mb-1">Student *</label>
-                <select name="student_id" required class="ui-input">
+            <!-- A search box filters a real <select>, so the browser's own
+                 "required" validation and keyboard behaviour still apply. -->
+            <div class="sm:col-span-2"
+                 x-data="{
+                     q: '',
+                     all: <?= htmlspecialchars(json_encode($studentList), ENT_QUOTES) ?>,
+                     get matches() {
+                         const t = this.q.trim().toLowerCase();
+                         return t === '' ? this.all : this.all.filter(s => s.find.includes(t));
+                     }
+                 }">
+                <label class="block text-sm font-medium text-gray-600 mb-1">Student *</label>
+                <div class="relative mb-2">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
+                    <input type="search" x-model="q" class="ui-input pl-8"
+                           placeholder="Search by name, student ID or programme…"
+                           autocomplete="off" @keydown.enter.prevent>
+                </div>
+                <select name="student_id" required class="ui-input" x-ref="studentSel">
                     <option value="">Select student</option>
-                    <?php foreach ($students as $s): ?>
-                        <option value="<?= $s['id'] ?>"><?= e($s['full_name']) ?> (<?= e($s['student_id']) ?>)</option>
-                    <?php endforeach; ?>
-                </select></div>
+                    <template x-for="s in matches" :key="s.id">
+                        <option :value="s.id" x-text="s.label"
+                                :selected="s.id === <?= (int) old('student_id') ?>"></option>
+                    </template>
+                </select>
+                <p class="text-xs text-gray-400 mt-1">
+                    <span x-text="matches.length"></span> of <?= count($studentList) ?> student(s)<span x-show="q.trim() !== ''"> matching “<span x-text="q"></span>”</span>.
+                    <span x-cloak style="display:none" x-show="matches.length === 0" class="text-amber-600">Nothing matched — clear the search to see everyone.</span>
+                </p>
+            </div>
         <?php endif; ?>
         <div><label class="block text-sm font-medium text-gray-600 mb-1">Preferred Room Type</label>
             <select name="preferred_room_type" class="ui-input" x-model="roomType" @change="$refs.roomSel.value = ''">
@@ -96,9 +131,18 @@ $roomData = array_map(fn($r) => [
                 <label class="block text-sm font-medium text-gray-600 mb-1">
                     Payment Reference ID <?= $refRequired ? '<span class="text-red-500">*</span>' : '<span class="text-gray-400 font-normal">(optional)</span>' ?>
                 </label>
-                <input name="payment_reference" value="<?= old('payment_reference') ?>" class="ui-input bg-white tnum"
-                       placeholder="e.g. TRX-8842019PQ" maxlength="80" <?= $refRequired ? 'required' : '' ?>>
-                <p class="text-xs text-gray-400 mt-1">The transaction ID on your receipt or confirmation SMS.</p>
+                <?php if ($refRequired): /* students: digits only, and mandatory */ ?>
+                    <input name="payment_reference" value="<?= old('payment_reference') ?>" class="ui-input bg-white tnum"
+                           placeholder="e.g. 88689908944" inputmode="numeric" pattern="[0-9]{4,30}"
+                           title="Numbers only — at least 4 digits, exactly as shown on your receipt"
+                           maxlength="30" autocomplete="off" required
+                           oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                    <p class="text-xs text-gray-400 mt-1">Numbers only — the transaction ID on your receipt or confirmation SMS.</p>
+                <?php else: /* staff may record an older, non-numeric reference */ ?>
+                    <input name="payment_reference" value="<?= old('payment_reference') ?>" class="ui-input bg-white tnum"
+                           placeholder="e.g. 88689908944" maxlength="80" autocomplete="off">
+                    <p class="text-xs text-gray-400 mt-1">Leave blank to add it later once the student produces a receipt.</p>
+                <?php endif; ?>
             </div>
         </div>
 

@@ -202,15 +202,34 @@ class ApplicationController extends Controller
         if (!array_key_exists((string) $studentType, Hostel::STUDENT_TYPES)) {
             $studentType = Student::typeFor($student);
         }
-        $reference = $this->input('payment_reference') ?: null;
+        $isStudentApplying = Auth::hasRole('student');
+        $rawReference = trim((string) $this->input('payment_reference'));
+        // Only the separators people paste in are removed. Letters are NOT
+        // stripped: silently turning "TRS-768654-87649" into "76865487649"
+        // would store a number that matches nothing at the bank, so a reference
+        // containing letters has to be refused and retyped instead.
+        $reference = preg_replace('/[\s\-().]/', '', $rawReference) ?: null;
 
-        // Students must supply the reference when their hostel asks for one.
-        // Staff recording an application on someone's behalf may leave it out
-        // and fill it in once the student produces their receipt.
-        if ($reference === null && Auth::hasRole('student') && Hostel::duesReferenceRequired($dues)) {
-            Session::set('_old', $_POST);
-            Session::flash('error', 'Please enter the Reference ID from your hall dues payment.');
-            $this->redirect('/applications/create');
+        // Students must always supply it, digits only. Staff recording an
+        // application on someone's behalf may leave it out and add it later, and
+        // may enter a legacy non-numeric reference exactly as written.
+        if ($isStudentApplying) {
+            $problem = null;
+            if ($reference === null) {
+                $problem = 'Please enter the Reference ID from your hall dues payment — it is required.';
+            } elseif (!ctype_digit($reference)) {
+                $problem = 'The Reference ID must be numbers only. Enter the digits exactly as they appear on your receipt.';
+            } elseif (strlen($reference) < 4) {
+                $problem = 'That Reference ID looks too short — enter it in full, exactly as shown on your receipt.';
+            }
+            if ($problem !== null) {
+                Session::set('_old', $_POST);
+                Session::flash('error', $problem);
+                $this->redirect('/applications/create');
+            }
+        } else {
+            // Keep a staff-typed reference verbatim, separators and all.
+            $reference = $rawReference !== '' ? $rawReference : null;
         }
 
         $attributes = [
