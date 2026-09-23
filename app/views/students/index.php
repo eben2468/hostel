@@ -1,10 +1,31 @@
-<?php /** @var array $students @var string $term @var string $status */
+<?php /** @var array $students @var string $term @var string $status @var string $duesType @var bool $duesFilters */
 use App\Core\Auth;
 $canManage = Auth::hasRole('admin', 'hostel_admin');
+
+$duesType    = $duesType ?? '';
+$duesFilters = $duesFilters ?? false;   // false = hall-dues migration not run yet
+
+/** The dues categories admins can narrow the list to, in dropdown order. */
+$duesOptions = [
+    'fresher'    => ['Freshers — dues paid',    'fa-seedling'],
+    'continuing' => ['Continuing — dues paid',  'fa-user-clock'],
+];
+
+$total      = (int) ($pager['total'] ?? count($students));
+$hasFilters = $term !== '' || $status !== '' || $duesType !== '';
+// What the total above the table is counting, so "412" is never ambiguous.
+$countLabel = [
+    'fresher'    => 'fresher(s) with hall dues paid',
+    'continuing' => 'continuing student(s) with hall dues paid',
+][$duesType] ?? 'student(s)';
+
+// Export the list as it is filtered on screen, rather than every student.
+$exportQuery = array_filter(['q' => $term, 'status' => $status, 'dues_type' => $duesType], fn($v) => $v !== '');
+$exportUrl   = url('/export/students') . ($exportQuery ? '?' . http_build_query($exportQuery) : '');
 ?>
 <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4">
-    <form method="get" class="flex gap-2 flex-1 max-w-xl">
-        <div class="relative flex-1">
+    <form method="get" class="flex flex-wrap gap-2 flex-1 lg:max-w-2xl">
+        <div class="relative flex-1 min-w-[12rem]">
             <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
             <input name="q" value="<?= e($term) ?>" placeholder="Search name, ID, email…" class="ui-input pl-10" aria-label="Search students">
         </div>
@@ -14,11 +35,26 @@ $canManage = Auth::hasRole('admin', 'hostel_admin');
                 <option value="<?= $s ?>" <?= $status===$s?'selected':'' ?>><?= ucfirst($s) ?></option>
             <?php endforeach; ?>
         </select>
+        <?php if ($duesFilters): ?>
+            <select name="dues_type" class="ui-input w-auto" aria-label="Filter by hall dues category paid">
+                <option value="">All dues categories</option>
+                <?php foreach ($duesOptions as $key => [$label, $icon]): ?>
+                    <option value="<?= $key ?>" <?= $duesType===$key?'selected':'' ?>><?= e($label) ?></option>
+                <?php endforeach; ?>
+            </select>
+        <?php endif; ?>
         <button class="btn btn-primary"><i class="fa-solid fa-magnifying-glass"></i><span class="hidden sm:inline">Search</span></button>
     </form>
-    <div class="flex gap-2">
+    <div class="flex flex-wrap items-center gap-3">
+        <p class="text-sm text-gray-500 whitespace-nowrap">
+            <?php if ($duesType !== ''): ?>
+                <i class="fa-solid <?= $duesOptions[$duesType][1] ?> text-primary-400 mr-0.5"></i>
+            <?php endif; ?>
+            <span class="font-semibold text-gray-700"><?= $total ?></span>
+            <?= $countLabel ?><?= $hasFilters ? ' <span class="text-gray-400">found</span>' : '' ?>
+        </p>
         <?php if (Auth::hasRole('admin','hostel_admin','finance')): ?>
-            <a href="<?= url('/export/students') ?>" class="btn btn-ghost"><i class="fa-solid fa-file-csv"></i> Export</a>
+            <a href="<?= e($exportUrl) ?>" class="btn btn-ghost"><i class="fa-solid fa-file-csv"></i> Export</a>
         <?php endif; ?>
         <?php if ($canManage): ?>
             <a href="<?= url('/students/import') ?>" class="btn btn-ghost"><i class="fa-solid fa-upload"></i> Import</a>

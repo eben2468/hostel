@@ -14,24 +14,74 @@ class Student extends Model
         'guardian_relationship','blood_group','allergies','emergency_contact','status','photo',
     ];
 
-    public function search(string $term = '', string $status = ''): array
+    /**
+     * The WHERE fragment every student listing shares: the search box, the
+     * status dropdown, the hall-dues filter and the caller's hostel scope.
+     * Kept in one place so the table, the total shown above it and the CSV
+     * export can never disagree about who matched.
+     *
+     * @param  string $duesType '' | 'fresher' | 'continuing'
+     * @return array{0:string, 1:array} the fragment (opening with " WHERE 1") and its bind params
+     */
+    public function filters(string $term = '', string $status = '', string $duesType = ''): array
     {
-        $sql = "SELECT * FROM students WHERE 1";
+        $where  = " WHERE 1";
         $params = [];
         if ($term !== '') {
-            $sql .= " AND (full_name LIKE ? OR student_id LIKE ? OR email LIKE ? OR index_number LIKE ?)";
+            $where .= " AND (full_name LIKE ? OR student_id LIKE ? OR email LIKE ? OR index_number LIKE ?)";
             $like = "%{$term}%";
             array_push($params, $like, $like, $like, $like);
         }
         if ($status !== '') {
-            $sql .= " AND status = ?";
+            $where .= " AND status = ?";
             $params[] = $status;
         }
+        if ($duesType !== '' && self::duesFilterInstalled()) {
+            // "Paid as a fresher" is a fact about the dues payment, not about how
+            // the application ended — a student whose application was later
+            // rejected or cancelled still paid — so the application's own status
+            // is deliberately not part of this test.
+            $where .= " AND EXISTS (SELECT 1 FROM applications a
+                                     WHERE a.student_id = students.id
+                                       AND a.student_type = ?
+                                       AND a.payment_status = 'verified')";
+            $params[] = $duesType;
+        }
         [$scope, $bind] = Scope::on('hostel_id');
-        $sql .= $scope;
+        $where .= $scope;
         array_push($params, ...$bind);
-        $sql .= " ORDER BY created_at DESC";
-        return Database::all($sql, $params);
+        return [$where, $params];
+    }
+
+    /**
+     * True when the hall-dues migration has been run, so students can be
+     * filtered by the category they paid their dues under.
+     *
+     * Checked so the Students screen quietly drops the filter on a deployment
+     * where the code is live but `database/migration_hostel_dues.sql` has not
+     * been imported yet, instead of throwing on an unknown column.
+     */
+    public static function duesFilterInstalled(): bool
+    {
+        static $installed = null;
+        if ($installed === null) {
+            try {
+                $installed = (int) Database::scalar(
+                    "SELECT COUNT(*) FROM information_schema.COLUMNS
+                     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'applications'
+                       AND COLUMN_NAME IN ('student_type', 'payment_status')"
+                ) === 2;
+            } catch (\Throwable $e) {
+                $installed = false;
+            }
+        }
+        return $installed;
+    }
+
+    public function search(string $term = '', string $status = '', string $duesType = ''): array
+    {
+        [$where, $params] = $this->filters($term, $status, $duesType);
+        return Database::all("SELECT * FROM students{$where} ORDER BY created_at DESC", $params);
     }
 
     public function byUserId(int $userId): ?array
@@ -113,23 +163,14 @@ class Student extends Model
         return (int) $m[0] <= 100 ? 'fresher' : 'continuing';
     }
 
-    /** Paginated search. Returns a Paginator::make result array. */
-    public function searchPaginated(string $term, string $status, int $page, int $perPage = 15): array
+    /**
+     * Paginated search. Returns a Paginator::make result array whose `total`
+     * counts every matching student — that is the number the Students screen
+     * reports above the table, not merely the rows on the current page.
+     */
+    public function searchPaginated(string $term, string $status, string $duesType, int $page, int $perPage = 15): array
     {
-        $where = ' WHERE 1';
-        $params = [];
-        if ($term !== '') {
-            $where .= " AND (full_name LIKE ? OR student_id LIKE ? OR email LIKE ? OR index_number LIKE ?)";
-            $like = "%{$term}%";
-            array_push($params, $like, $like, $like, $like);
-        }
-        if ($status !== '') {
-            $where .= " AND status = ?";
-            $params[] = $status;
-        }
-        [$scope, $bind] = Scope::on('hostel_id');
-        $where .= $scope;
-        array_push($params, ...$bind);
+        [$where, $params] = $this->filters($term, $status, $duesType);
         return \App\Core\Paginator::make(
             "SELECT COUNT(*) FROM students{$where}",
             "SELECT * FROM students{$where} ORDER BY created_at DESC",

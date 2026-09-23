@@ -11,7 +11,7 @@ A modern, web-based hostel administration platform built with **plain PHP 8**, *
 | **Dashboards** | Distinct dashboards per role — admin/hostel (stats + charts), **finance** (revenue trend, methods, top debtors), **maintenance** (work queue by priority, by category), **security** (visitor queue + log), and a student portal |
 | **Pagination** | Server-side pagination on students, payments, allocations, applications, complaints, visitors & audit logs, preserving search/filter in the URL |
 | **Image uploads** | Validated student photos & profile avatars (JPG/PNG/WebP, ≤2 MB, real-image check), shown across lists, profiles & the topbar |
-| **Students** | Full CRUD, search & filter, profile view, **bulk CSV import** |
+| **Students** | Full CRUD, search & filter (including **freshers / continuing students whose hall dues are confirmed paid**, with a running total), profile view, **bulk CSV import** |
 | **Notifications** | In-app notifications with bell + unread badge, fired on applications, allocations, payments, complaints & notices |
 | **Hostels** | CRUD with facilities, live occupancy cards |
 | **Blocks & Floors** | Nested structure management under each hostel |
@@ -307,8 +307,18 @@ application in their own list. The applications CSV export carries the reference
 expected amount, check state and review note so they can be reconciled against a
 bank statement in a spreadsheet.
 
+Once a reference is marked *payment found*, the student counts as having paid
+their dues under that category. The **Students** page can then be narrowed to
+**Freshers — dues paid** (or continuing students), and it reports the total above
+the table — the headcount for a fresher list, bank reconciliation or welcome pack.
+The count covers every match, not just the current page, and the **Export** button
+downloads exactly that filtered list. Because it turns on whether the payment was
+traced rather than on how the application ended, a fresher whose application was
+later rejected or cancelled is still counted as having paid.
+
 Hostel isolation applies throughout: a hostel admin can only read or write their
-own hostel's dues settings and can only review applications directed at it.
+own hostel's dues settings and can only review applications directed at it, and
+the fresher count on the Students page is likewise limited to their own hostel.
 
 On an existing database, run the migration once. Like the two-factor migration it
 carries no `USE` statement, so it applies to whichever database you point it at:

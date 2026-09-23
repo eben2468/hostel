@@ -12,13 +12,23 @@ class ExportController extends Controller
     public function students(): void
     {
         $this->requireAuth('admin', 'hostel_admin', 'finance');
-        [$scope, $bind] = Scope::on('hostel_id');
+        // The Students screen passes its filters through, so what downloads is
+        // the list the admin is looking at — freshers who have paid their hall
+        // dues, say — and not silently the whole hall.
+        $duesType = trim($_GET['dues_type'] ?? '');
+        if (!isset(\App\Models\Hostel::STUDENT_TYPES[$duesType])) {
+            $duesType = '';
+        }
+        [$where, $params] = (new \App\Models\Student())->filters(
+            trim($_GET['q'] ?? ''), trim($_GET['status'] ?? ''), $duesType
+        );
         $rows = Database::all(
             "SELECT student_id, full_name, gender, programme, department, level, phone, email,
                     guardian_name, guardian_phone, guardian_relationship, status
-             FROM students WHERE 1{$scope} ORDER BY full_name", $bind
+             FROM students{$where} ORDER BY full_name", $params
         );
-        Audit::log('export', 'students', null, count($rows) . ' rows');
+        Audit::log('export', 'students', null, count($rows) . ' rows'
+            . ($duesType !== '' ? " (dues_type={$duesType})" : ''));
         // Guardian details ride along so an office can print a contact list.
         Csv::download('students', $rows, [
             'student_id' => 'Student ID', 'full_name' => 'Full Name', 'gender' => 'Gender',

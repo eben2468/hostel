@@ -30,13 +30,22 @@ class StudentController extends Controller
         $this->requireAuth('admin', 'hostel_admin', 'finance', 'security');
         $term   = trim($_GET['q'] ?? '');
         $status = trim($_GET['status'] ?? '');
-        $pager  = $this->students->searchPaginated($term, $status, \App\Core\Paginator::currentPage());
+        // Which hall-dues category the student paid under, as confirmed on their
+        // room application. Anything not one of the two known categories is
+        // treated as "no dues filter".
+        $duesType = trim($_GET['dues_type'] ?? '');
+        if (!isset(Hostel::STUDENT_TYPES[$duesType])) {
+            $duesType = '';
+        }
+        $pager = $this->students->searchPaginated($term, $status, $duesType, \App\Core\Paginator::currentPage());
         $this->view('students/index', [
-            'pageTitle' => 'Students',
-            'students'  => $pager['rows'],
-            'pager'     => $pager,
-            'term'      => $term,
-            'status'    => $status,
+            'pageTitle'   => 'Students',
+            'students'    => $pager['rows'],
+            'pager'       => $pager,
+            'term'        => $term,
+            'status'      => $status,
+            'duesType'    => $duesType,
+            'duesFilters' => Student::duesFilterInstalled(),
         ]);
     }
 
