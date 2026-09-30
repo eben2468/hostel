@@ -209,6 +209,7 @@ $router->get('/export/payments',     [ExportController::class, 'payments']);
 $router->get('/export/invoices',     [ExportController::class, 'invoices']);
 $router->get('/export/applications', [ExportController::class, 'applications']);
 $router->get('/export/complaints',   [ExportController::class, 'complaints']);
+$router->get('/export/allocations',  [ExportController::class, 'allocations']);
 $router->get('/export/occupancy',    [ExportController::class, 'occupancy']);
 $router->get('/export/audit',        [ExportController::class, 'audit']);
 

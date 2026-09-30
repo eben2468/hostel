@@ -30,7 +30,7 @@ A modern, web-based hostel administration platform built with **plain PHP 8**, *
 | **Statements** | Per-student account statement PDF (invoices, payments, balance) |
 | **Audit Logs** | Full action trail with module filter (admin) |
 | **Settings** | Institution, currency, Paystack keys, SMTP/SMS, **enforced** maintenance mode (admin) |
-| **Exports** | One-click CSV export of students, payments, invoices & audit logs |
+| **Exports** | One-click CSV export of students, payments, invoices, applications, complaints, **allocations (the room roster — who sleeps where)**, occupancy & audit logs |
 | **Notices** | Notice board with audience targeting & pinning |
 | **Profile** | Update details & change password |
 

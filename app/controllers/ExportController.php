@@ -6,6 +6,7 @@ use App\Core\Csv;
 use App\Core\Audit;
 use App\Core\Database;
 use App\Core\Scope;
+use App\Models\Room;
 
 class ExportController extends Controller
 {
@@ -124,6 +125,67 @@ class ExportController extends Controller
             'full_name' => 'Student', 'student_id' => 'Student ID', 'category' => 'Category',
             'title' => 'Title', 'priority' => 'Priority', 'status' => 'Status',
             'room_number' => 'Room', 'created_at' => 'Reported',
+        ]);
+    }
+
+    /**
+     * The room roster — which room each student sleeps in, and who they are.
+     *
+     * Ordered the way an office walks the building: hostel, then room in floor
+     * order (Ground, First, Second, Top, numerically within each), then student
+     * name, so the file can be read against the doors themselves.
+     *
+     * This is tonight's roster: only the allocations that actually put a student
+     * in a bed. The Reports page links here *without* its term, unlike the other
+     * exports — an allocation is only stamped with a term when one was recorded,
+     * so filtering by the selected term would quietly drop most of the hall.
+     *
+     * A caller that does pass ?year=&sem= gets that term's record instead, which
+     * additionally needs the students who have since checked out and the
+     * allocations parked when the term ended; without those a past term would
+     * download as an empty file.
+     */
+    public function allocations(): void
+    {
+        $this->requireAuth('admin', 'hostel_admin', 'finance');
+        [$scope, $bind]  = Scope::on('r.hostel_id');
+        [$term, $termB]  = $this->termFilter('a');
+
+        // 'cancelled' and 'transferred' allocations never describe where someone
+        // sleeps, so they are left out of both variants.
+        $states = $term === ''
+            ? ['active', 'checked_in']
+            : ['active', 'checked_in', 'checked_out', 'suspended'];
+        $placeholders = implode(', ', array_fill(0, count($states), '?'));
+
+        $rows = Database::all(
+            "SELECT h.name AS hostel, bl.name AS block, f.number AS floor,
+                    r.room_number, r.room_type, b.bed_number,
+                    s.full_name, s.student_id, s.gender, s.level, s.phone,
+                    s.guardian_name, s.guardian_phone,
+                    a.status, a.check_in_at, a.academic_year, a.semester
+             FROM allocations a
+             JOIN students s ON s.id = a.student_id
+             JOIN rooms r    ON r.id = a.room_id
+             LEFT JOIN hostels h ON h.id = r.hostel_id
+             LEFT JOIN blocks bl ON bl.id = r.block_id
+             LEFT JOIN floors f  ON f.id = r.floor_id
+             LEFT JOIN beds b    ON b.id = a.bed_id
+             WHERE a.status IN ({$placeholders}){$scope}{$term}
+             ORDER BY h.name, " . Room::ORDER_BY_NUMBER . ", b.bed_number, s.full_name",
+            array_merge($states, $bind, $termB)
+        );
+        Audit::log('export', 'allocations', null, count($rows) . ' rows');
+        // Guardian details ride along for the same reason they do on the students
+        // export: a night-duty roster is also the sheet you reach for a next of kin.
+        Csv::download('allocations', $rows, [
+            'hostel' => 'Hostel', 'block' => 'Block', 'floor' => 'Floor',
+            'room_number' => 'Room', 'room_type' => 'Room Type', 'bed_number' => 'Bed',
+            'full_name' => 'Student', 'student_id' => 'Student ID', 'gender' => 'Gender',
+            'level' => 'Level', 'phone' => 'Phone',
+            'guardian_name' => 'Guardian', 'guardian_phone' => 'Guardian Phone',
+            'status' => 'Status', 'check_in_at' => 'Checked In',
+            'academic_year' => 'Year', 'semester' => 'Semester',
         ]);
     }
 

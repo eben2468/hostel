@@ -117,10 +117,14 @@ $tq = ($term['year'] !== '' && $term['sem'] !== '') ? '?year=' . urlencode($term
         ['Invoices',     url('/export/invoices') . $tq,        'fa-file-invoice-dollar', 'Billing'],
         ['Applications', url('/export/applications') . $tq,    'fa-file-lines', 'Room requests'],
         ['Complaints',   url('/export/complaints'),            'fa-screwdriver-wrench', 'Maintenance'],
+        // Deliberately not term-filtered: the roster answers "who is in this room
+        // now", and most allocations carry no semester stamp, so pinning it to the
+        // selected term would quietly export a handful of rows instead of the hall.
+        ['Allocations',  url('/export/allocations'),           'fa-door-open', 'Who sleeps where'],
         ['Occupancy',    url('/export/occupancy') . $tq,       'fa-bed', 'Per hostel'],
     ];
     ?>
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mt-4">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 mt-4">
         <?php foreach ($exports as [$label, $href, $icon, $note]): ?>
             <a href="<?= $href ?>" class="group rounded-xl border border-gray-200 hover:border-primary-300 hover:bg-primary-50/40 p-3 text-center transition">
                 <span class="inline-flex w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-primary-100 text-gray-500 group-hover:text-primary-600 items-center justify-center mb-1.5 transition"><i class="fa-solid <?= $icon ?> text-sm"></i></span>
