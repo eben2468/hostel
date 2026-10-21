@@ -90,6 +90,39 @@ class Student extends Model
     }
 
     /**
+     * Is this institutional ID already on another student's record?
+     *
+     * `students.student_id` is UNIQUE, so without this check a repeated ID
+     * reaches MySQL and comes back as an uncaught integrity-constraint
+     * exception — a blank HTTP 500 on a live server, where errors are hidden.
+     * Asked first, it becomes an ordinary "that ID is taken" message instead.
+     *
+     * @param int|null $exceptId the student being edited, who may keep their own ID
+     */
+    public function idTaken(string $studentId, ?int $exceptId = null): bool
+    {
+        $studentId = trim($studentId);
+        if ($studentId === '') {
+            return false;
+        }
+        $sql    = "SELECT COUNT(*) FROM students WHERE student_id = ?";
+        $params = [$studentId];
+        if ($exceptId !== null) {
+            $sql .= " AND id <> ?";
+            $params[] = $exceptId;
+        }
+        // Deliberately unscoped by hostel: the column is unique across the whole
+        // table, so an ID held by another hostel's student still collides.
+        return (int) Database::scalar($sql, $params) > 0;
+    }
+
+    /** True when a PDO error is MySQL's "duplicate entry for a unique key" (1062). */
+    public static function isDuplicateEntry(\PDOException $e): bool
+    {
+        return $e->getCode() === '23000' && str_contains($e->getMessage(), '1062');
+    }
+
+    /**
      * Push a student record's contact details onto their linked login account.
      *
      * A student's address is held twice: `students.email` is where every

@@ -69,7 +69,20 @@ class StudentController extends Controller
             Session::flash('error', reset($errors));
             $this->redirect('/students/create');
         }
-        $id = $this->students->create($this->data());
+        $studentId = (string) $this->input('student_id');
+        if ($this->students->idTaken($studentId)) {
+            $this->rejectDuplicateId($studentId, '/students/create');
+        }
+        try {
+            $id = $this->students->create($this->data());
+        } catch (\PDOException $e) {
+            // Backstop for the gap between the check above and the insert, when
+            // two people add the same ID at once.
+            if (!Student::isDuplicateEntry($e)) {
+                throw $e;
+            }
+            $this->rejectDuplicateId($studentId, '/students/create');
+        }
         $this->handlePhoto($id);
         Audit::log('create', 'students', $id);
         Session::flash('success', 'Student added successfully.');
@@ -155,7 +168,18 @@ class StudentController extends Controller
             $this->notFound();
         }
         $this->guardHostel($existing['hostel_id'] !== null ? (int) $existing['hostel_id'] : null);
-        $this->students->update($id, $this->data($existing));
+        $studentId = (string) $this->input('student_id');
+        if ($this->students->idTaken($studentId, (int) $id)) {
+            $this->rejectDuplicateId($studentId, '/students/' . $id . '/edit');
+        }
+        try {
+            $this->students->update($id, $this->data($existing));
+        } catch (\PDOException $e) {
+            if (!Student::isDuplicateEntry($e)) {
+                throw $e;
+            }
+            $this->rejectDuplicateId($studentId, '/students/' . $id . '/edit');
+        }
         $this->handlePhoto($id, $existing['photo'] ?? null);
         // Keep the login account's address in step, or mail keeps going to the
         // old one — notifications are sent to students.email, not users.email.
@@ -271,6 +295,27 @@ class StudentController extends Controller
         }
         \App\Core\Upload::remove($existing);
         $this->students->update($id, ['photo' => $result['path']]);
+    }
+
+    /**
+     * Send the admin back to the form with a plain explanation that the
+     * institutional ID is already on file, keeping everything they typed.
+     *
+     * Where the student already sits in a hostel this admin can see, the message
+     * names them, which is usually the whole answer — the record was added
+     * before. It never leaks a name from another hostel.
+     */
+    private function rejectDuplicateId(string $studentId, string $back): void
+    {
+        $owner = $this->students->findBy('student_id', $studentId);
+        $named = '';
+        if ($owner && (Scope::isGlobal() || (int) ($owner['hostel_id'] ?? 0) === Scope::hostelId())) {
+            $named = ' It belongs to ' . $owner['full_name'] . '.';
+        }
+        Session::set('_old', $_POST);
+        Session::flash('error', 'Student ID "' . $studentId . '" is already in use.' . $named
+            . ' Student IDs must be unique — check the ID, or search for the existing record.');
+        $this->redirect($back);
     }
 
     private function notFound(): void
